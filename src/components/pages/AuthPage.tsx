@@ -41,6 +41,19 @@ export const AuthPage: React.FC<AuthPageProps> = ({ state, token, onSuccess }) =
       return;
     }
 
+    // Handle multi-character (e.g. mobile SMS auto-fill or pasting multiple digits)
+    if (cleanValue.length > 1) {
+      const newOtp = [...otp];
+      for (let i = 0; i < cleanValue.length && index + i < 6; i++) {
+        newOtp[index + i] = cleanValue[i];
+      }
+      setOtp(newOtp);
+      setErrorMessage(null);
+      const nextFocus = Math.min(index + cleanValue.length, 5);
+      inputRefs.current[nextFocus]?.focus();
+      return;
+    }
+
     // Handle single character
     const char = cleanValue.slice(-1);
     const newOtp = [...otp];
@@ -55,9 +68,26 @@ export const AuthPage: React.FC<AuthPageProps> = ({ state, token, onSuccess }) =
   };
 
   const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Backspace' && !otp[index] && index > 0) {
+    if (e.key === 'Backspace') {
+      if (!otp[index] && index > 0) {
+        inputRefs.current[index - 1]?.focus();
+      }
+    } else if (e.key === 'ArrowLeft' && index > 0) {
       inputRefs.current[index - 1]?.focus();
+    } else if (e.key === 'ArrowRight' && index < 5) {
+      inputRefs.current[index + 1]?.focus();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (isOtpComplete && !isLoading) {
+        handleVerify();
+      }
     }
+  };
+
+  const handleFillDemoOtp = () => {
+    setOtp(['1', '2', '3', '4', '5', '6']);
+    setErrorMessage(null);
+    inputRefs.current[5]?.focus();
   };
 
   const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
@@ -209,9 +239,17 @@ export const AuthPage: React.FC<AuthPageProps> = ({ state, token, onSuccess }) =
 
           {/* Quick Helper for Test Experience */}
           <div className="flex items-center justify-between text-xs text-slate-500 mb-6">
-            <span className="text-[11px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded">
-              Code: 123456
-            </span>
+            <button
+              id="fill-demo-otp-btn"
+              type="button"
+              onClick={handleFillDemoOtp}
+              className="inline-flex items-center gap-1.5 text-[11px] text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200/80 px-2.5 py-1 rounded-md font-medium transition-colors cursor-pointer"
+              title="Click to auto-fill test code 123456"
+            >
+              <span>Test Code:</span>
+              <span className="font-mono font-bold tracking-wider">123456</span>
+              <span className="text-[10px] text-blue-500 underline ml-0.5">auto-fill</span>
+            </button>
 
             {resendCountdown > 0 ? (
               <span className="text-slate-400 font-medium">

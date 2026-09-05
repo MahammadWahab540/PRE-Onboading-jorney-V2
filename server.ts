@@ -8,15 +8,21 @@ import * as googleTTS from 'google-tts-api';
 const app = express();
 const PORT = 3000;
 
-// Initialize Gemini Client
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY,
-  httpOptions: {
-    headers: {
-      'User-Agent': 'aistudio-build',
-    },
-  },
-});
+// Lazy initialize Gemini Client
+let aiClient: GoogleGenAI | null = null;
+function getAi(): GoogleGenAI {
+  if (!aiClient) {
+    aiClient = new GoogleGenAI({
+      apiKey: process.env.GEMINI_API_KEY || '',
+      httpOptions: {
+        headers: {
+          'User-Agent': 'aistudio-build',
+        },
+      },
+    });
+  }
+  return aiClient;
+}
 
 app.use(express.json());
 
@@ -123,14 +129,23 @@ function getOrCreateJourney(token: string): SalesforceJourney {
       ...defaultJourney,
       Id: `a0B_${token.slice(0, 8)}`,
       Current_OTP__c: '123456',
-      OTP_Expires_At__c: Date.now() + 10 * 60 * 1000,
+      OTP_Expires_At__c: Date.now() + 24 * 60 * 60 * 1000,
     });
   }
-  return journeyStore.get(token)!;
+  const j = journeyStore.get(token)!;
+  // Ensure OTP expiry is fresh for active sessions
+  if (!j.OTP_Expires_At__c || j.OTP_Expires_At__c < Date.now()) {
+    j.OTP_Expires_At__c = Date.now() + 24 * 60 * 60 * 1000;
+  }
+  return j;
 }
 
 // Seed the default token
-journeyStore.set('nw_rahul_genius_2026', { ...defaultJourney });
+journeyStore.set('nw_rahul_genius_2026', {
+  ...defaultJourney,
+  Current_OTP__c: '123456',
+  OTP_Expires_At__c: Date.now() + 24 * 60 * 60 * 1000,
+});
 
 function maskMobile(phone: string): string {
   if (!phone || phone.length < 5) return '98•••••210';
@@ -191,22 +206,6 @@ app.get('/api/enrollment/:token', (req, res) => {
   });
 });
 
-// Audio narration streaming endpoint
-app.get('/api/video-narration/:lang/:sceneId', (req, res) => {
-  const { lang, sceneId } = req.params;
-  const safeLang = lang === 'te' ? 'te' : 'en';
-  const safeId = parseInt(sceneId, 10) || 1;
-  const filePath = path.join(process.cwd(), 'public', 'audio', `scene_${safeLang}_${safeId}.wav`);
-
-  if (fs.existsSync(filePath)) {
-    res.setHeader('Content-Type', 'audio/wav');
-    res.setHeader('Cache-Control', 'public, max-age=86400');
-    return fs.createReadStream(filePath).pipe(res);
-  }
-
-  return res.status(404).json({ error: 'Audio narration file not found' });
-});
-
 // Send OTP
 app.post('/api/enrollment/:token/otp/send', (req, res) => {
   const { token } = req.params;
@@ -215,12 +214,12 @@ app.post('/api/enrollment/:token/otp/send', (req, res) => {
   // Set fresh OTP
   const generatedOtp = '123456';
   journey.Current_OTP__c = generatedOtp;
-  journey.OTP_Expires_At__c = Date.now() + 5 * 60 * 1000;
+  journey.OTP_Expires_At__c = Date.now() + 15 * 60 * 1000;
 
   return res.json({
     success: true,
     message: `Verification code sent to +91 ${maskMobile(journey.Student_Number__c)}`,
-    expiresIn: 300,
+    expiresIn: 900,
     hintOtp: '123456',
   });
 });
@@ -238,15 +237,21 @@ app.post('/api/enrollment/:token/otp/verify', (req, res) => {
     });
   }
 
-  if (Date.now() > journey.OTP_Expires_At__c) {
-    return res.status(400).json({
-      success: false,
-      error: 'This code has expired. Request a new one.',
-    });
-  }
+  const cleanedOtp = otp.trim();
 
-  // We accept '123456' as standard test OTP or exact match
-  if (otp.trim() === journey.Current_OTP__c || otp.trim() === '123456') {
+  // Test / demo master OTP '123456' is ALWAYS accepted
+  const isMasterTestOtp = cleanedOtp === '123456';
+  const isCurrentOtpMatch = cleanedOtp === journey.Current_OTP__c;
+
+  if (isMasterTestOtp || isCurrentOtpMatch) {
+    // Only check expiration if it's a dynamic OTP and NOT the master test code
+    if (!isMasterTestOtp && Date.now() > journey.OTP_Expires_At__c) {
+      return res.status(400).json({
+        success: false,
+        error: 'This code has expired. Click Resend OTP to get a fresh code.',
+      });
+    }
+
     journey.Authentication_Verified__c = true;
     return res.json({
       success: true,
@@ -720,10 +725,9 @@ app.post('/api/voice-guide/ask', async (req, res) => {
     });
   }
 
-  // If GEMINI_API_KEY is available, use Gemini model gemini-3.8-flash
+  // If GEMINI_API_KEY is available, query Gemini with resilient fallback chain
   if (process.env.GEMINI_API_KEY) {
-    try {
-      const prompt = `Learner name: ${learnerName || 'Learner'}
+    const prompt = `Learner name: ${learnerName || 'Learner'}
 Current Portal Step: ${currentStep} (${script.title})
 Context: ${script.speech}
 Key points for this step: ${script.keyPoints.join('; ')}
@@ -731,27 +735,40 @@ User's Question: "${question}"
 
 Please provide a reassuring, concise (2 to 3 sentences max) answer directly addressing their question as the NxtWave Voice Guide.`;
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.8-flash',
-        contents: prompt,
-        config: {
-          systemInstruction:
-            'You are Arya, the official voice guide for the NxtWave Learner Enrollment Portal. You speak warmly, clearly, and concisely to students and their parents. Answers must be 2-3 sentences max, suitable for natural audio text-to-speech. Never mention Salesforce internals or technical database fields. Help them feel confident and supported.',
-          temperature: 0.7,
-        },
-      });
+    // Prioritize gemini-flash-latest and gemini-3.6-flash to avoid 503 high-demand temporary outages on specific model versions
+    const candidateModels = [
+      'gemini-flash-latest',
+      'gemini-3.6-flash',
+      'gemini-3.1-flash-lite',
+      'gemini-3.8-flash',
+    ];
 
-      const text = response.text?.trim();
-      if (text) {
-        return res.json({
-          success: true,
-          answer: text,
-          source: 'gemini',
-          step: currentStep,
+    for (const modelName of candidateModels) {
+      try {
+        const response = await getAi().models.generateContent({
+          model: modelName,
+          contents: prompt,
+          config: {
+            systemInstruction:
+              'You are Arya, the official voice guide for the NxtWave Learner Enrollment Portal. You speak warmly, clearly, and concisely to students and their parents. Answers must be 2-3 sentences max, suitable for natural audio text-to-speech. Never mention Salesforce internals or technical database fields. Help them feel confident and supported.',
+            temperature: 0.7,
+          },
         });
+
+        const text = response.text?.trim();
+        if (text) {
+          return res.json({
+            success: true,
+            answer: text,
+            source: modelName,
+            step: currentStep,
+          });
+        }
+      } catch (err: any) {
+        console.warn(
+          `Gemini API notice: model ${modelName} returned status ${err?.status || err?.code || 'error'}, trying next fallback...`
+        );
       }
-    } catch (err) {
-      console.warn('Gemini API call error in voice-guide, falling back to rule-based guide:', err);
     }
   }
 
@@ -864,7 +881,7 @@ app.post('/api/tts/gemini', async (req, res) => {
   // 1. Attempt Gemini TTS (gemini-3.1-flash-tts-preview) with female voice
   if (process.env.GEMINI_API_KEY) {
     try {
-      const response = await ai.models.generateContent({
+      const response = await getAi().models.generateContent({
         model: 'gemini-3.1-flash-tts-preview',
         contents: [{ parts: [{ text }] }],
         config: {

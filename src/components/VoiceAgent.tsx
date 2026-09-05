@@ -51,6 +51,7 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
 
   const synthRef = useRef<SpeechSynthesis | null>(null);
   const currentUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const speechTimerRef = useRef<NodeJS.Timeout | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null);
 
@@ -61,13 +62,47 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
     }
   }, []);
 
-  // Stop current speech
+  // Stop current speech and voice recognition immediately
   const stopSpeech = useCallback(() => {
+    if (speechTimerRef.current) {
+      clearTimeout(speechTimerRef.current);
+      speechTimerRef.current = null;
+    }
     if (synthRef.current) {
-      synthRef.current.cancel();
+      try {
+        synthRef.current.cancel();
+      } catch {}
+    }
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      try {
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.pause();
+        window.speechSynthesis.cancel();
+      } catch {}
+    }
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch {}
     }
     setIsSpeaking(false);
+    setIsListening(false);
   }, []);
+
+  // Listen for media play or external stop requests (e.g. video play button clicked)
+  useEffect(() => {
+    const handleStop = () => {
+      stopSpeech();
+    };
+
+    window.addEventListener('stop-voice-agent', handleStop);
+    window.addEventListener('play', handleStop, true);
+
+    return () => {
+      window.removeEventListener('stop-voice-agent', handleStop);
+      window.removeEventListener('play', handleStop, true);
+    };
+  }, [stopSpeech]);
 
   // Play text using browser SpeechSynthesis
   const speakText = useCallback(
@@ -130,9 +165,19 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
 
           // If auto-play is enabled, speak guidance
           if (autoPlayEnabled) {
+            if (speechTimerRef.current) {
+              clearTimeout(speechTimerRef.current);
+            }
             // Small pause for page entrance
-            setTimeout(() => {
-              if (isMounted && autoPlayEnabled) {
+            speechTimerRef.current = setTimeout(() => {
+              // Check if any video or audio is currently playing before starting speech
+              const isMediaPlaying =
+                typeof document !== 'undefined' &&
+                Array.from(document.querySelectorAll('video, audio')).some(
+                  (el) => !(el as HTMLMediaElement).paused
+                );
+
+              if (isMounted && autoPlayEnabled && !isMediaPlaying) {
                 speakText(data.speech);
               }
             }, 500);
