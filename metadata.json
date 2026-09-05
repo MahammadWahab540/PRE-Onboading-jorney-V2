@@ -1,0 +1,6 @@
+{
+  "name": "NxtWave Learner Enrollment Portal",
+  "description": "Learner-facing NxtWave enrollment portal for program onboarding, authentication, fee review, flexible payment options, and KYC scheduling.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
