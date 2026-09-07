@@ -63,7 +63,13 @@ export const PaymentLinkPage: React.FC<PaymentLinkPageProps> = ({
       });
       const data = await res.json();
 
-      if (data.payment && data.payment.status === 'SUCCESS') {
+      if (data.success && data.receiptId) {
+        onPaymentSuccess(
+          data.receiptId,
+          data.journey?.program?.amountPayable || amount,
+          new Date().toISOString()
+        );
+      } else if (data.payment && data.payment.status === 'SUCCESS') {
         onPaymentSuccess(
           data.payment.receiptId,
           data.payment.amountPaid,

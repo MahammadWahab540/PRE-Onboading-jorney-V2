@@ -13,9 +13,19 @@ export const CongratulationsPage: React.FC<CongratulationsPageProps> = ({
   onNext,
 }) => {
   const prefersReducedMotion = useReducedMotion();
-  const learnerName = state.learner.name || 'Rahul';
-  const firstName = learnerName.split(' ')[0] || 'Rahul';
-  const programName = state.program.name || 'Genius';
+  const rawLearnerName = state.learner?.name;
+  const learnerName =
+    typeof rawLearnerName === 'string'
+      ? rawLearnerName
+      : typeof rawLearnerName === 'object' && rawLearnerName && (rawLearnerName as any).name
+      ? String((rawLearnerName as any).name)
+      : 'Rahul';
+  const firstName =
+    typeof learnerName === 'string' && typeof learnerName.split === 'function'
+      ? learnerName.split(' ')[0] || 'Rahul'
+      : 'Rahul';
+  const programName =
+    typeof state.program?.name === 'string' ? state.program.name : 'Genius';
 
   // Subtle confetti particles state
   const [particles, setParticles] = useState<

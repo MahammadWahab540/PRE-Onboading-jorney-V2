@@ -441,6 +441,25 @@ export const WhyNoCostEmiPage: React.FC<WhyNoCostEmiPageProps> = ({
           </div>
         </div>
 
+        {/* TRANSPARENT FINANCING & REGULATORY COMPLIANCE DISCLOSURE */}
+        <div className="w-full mt-6 p-4 rounded-xl bg-slate-50 border border-slate-200/90 text-left text-xs space-y-2">
+          <div className="flex items-center gap-2 font-bold text-slate-800">
+            <span className="w-2 h-2 rounded-full bg-blue-500" />
+            <span>Key Financing Facts & Eligibility</span>
+          </div>
+          <ul className="space-y-1.5 text-slate-600 pl-4 list-disc">
+            <li>
+              <strong>Zero Extra Interest:</strong> You only pay the net course fee of ₹1,12,000 divided into 6 equal monthly installments (~₹18,667/mo).
+            </li>
+            <li>
+              <strong>Independent NBFC Evaluation:</strong> Applications are evaluated by RBI-registered partner NBFCs (Northern Arc, Fibe) based on credit bureau score and banking records.
+            </li>
+            <li>
+              <strong>Credit Profile Dependent:</strong> Final approval and disbursement are subject to NBFC underwriting criteria and document verification.
+            </li>
+          </ul>
+        </div>
+
         {/* Action Buttons */}
         <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-3 mt-6 pt-5 border-t border-slate-100">
           <button

@@ -214,8 +214,8 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
         body: JSON.stringify({
           step: currentRoute,
           question: query,
-          learnerName: state.learner.name,
-          programName: state.program.name,
+          learnerName: state.learner?.name || 'Learner',
+          programName: state.program?.name || 'NxtWave Program',
         }),
       });
 

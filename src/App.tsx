@@ -4,7 +4,7 @@ import type {
   PortalRoute,
   EnrollmentState,
   PaymentMethodType,
-  KycSlot,
+  EnrollmentJourney,
 } from './types';
 import { NxtWaveHeader } from './components/NxtWaveHeader';
 import { ProgressIndicator } from './components/ProgressIndicator';
@@ -16,9 +16,9 @@ import { PaymentLinkPage } from './components/pages/PaymentLinkPage';
 import { PaymentSuccessPage } from './components/pages/PaymentSuccessPage';
 import { WhyNoCostEmiPage } from './components/pages/WhyNoCostEmiPage';
 import { CoApplicantPage } from './components/pages/CoApplicantPage';
-import { KycSlotPage } from './components/pages/KycSlotPage';
-import { KycReadinessPage } from './components/pages/KycReadinessPage';
-import { KycConfirmationPage } from './components/pages/KycConfirmationPage';
+import { KycPage } from './components/pages/KycPage';
+import { NbfcStatusPage } from './components/pages/NbfcStatusPage';
+import { ClassAccessPage } from './components/pages/ClassAccessPage';
 import { SupportModal } from './components/SupportModal';
 import { VoiceAgent } from './components/VoiceAgent';
 
@@ -28,14 +28,14 @@ const initialEnrollmentState: EnrollmentState = {
   journeyId: '',
   token: DEFAULT_TOKEN,
   learner: {
-    name: '',
+    name: 'Rahul Kumar',
     mobileMasked: '98•••••210',
     emailMasked: 'ra•••••r@gmail.com',
   },
   program: {
-    name: 'Genius',
-    price: 100000,
-    amountPayable: 100000,
+    name: 'NxtWave Genius',
+    price: 112000,
+    amountPayable: 112000,
   },
   payment: {
     selectedMethod: null,
@@ -44,7 +44,7 @@ const initialEnrollmentState: EnrollmentState = {
   },
   emi: {
     selected: false,
-    amount: 100000,
+    amount: 112000,
     tenure: '6 Months',
   },
   coApplicant: {
@@ -57,8 +57,51 @@ const initialEnrollmentState: EnrollmentState = {
     status: 'NOT_STARTED',
     appointment: null,
   },
+  financing: {
+    applicationId: 'APP-NA-2026-902',
+    lenderName: 'Northern Arc',
+    status: 'UNDER_REVIEW',
+    appliedAmount: 112000,
+    approvedAmount: 112000,
+  },
   isAuthenticated: false,
 };
+
+// Normalize recommendedRoute from backend to PortalRoute
+function normalizeRoute(routeStr?: string): PortalRoute {
+  if (!routeStr) return 'auth';
+  const clean = routeStr.replace(/^\//, '');
+  switch (clean) {
+    case 'auth':
+      return 'auth';
+    case 'program-summary':
+    case 'program':
+      return 'program';
+    case 'congratulations':
+      return 'congratulations';
+    case 'payment-options':
+    case 'payment':
+      return 'payment';
+    case 'pay':
+      return 'pay';
+    case 'emi':
+      return 'emi';
+    case 'co-applicant':
+      return 'co-applicant';
+    case 'kyc':
+    case 'kyc-slot':
+    case 'kyc-readiness':
+    case 'kyc-confirmation':
+      return 'kyc';
+    case 'nbfc-status':
+      return 'nbfc-status';
+    case 'class-access':
+    case 'payment-success':
+      return 'class-access';
+    default:
+      return 'program';
+  }
+}
 
 export default function App() {
   const prefersReducedMotion = useReducedMotion();
@@ -74,28 +117,12 @@ export default function App() {
     const parts = pathname.split('/').filter(Boolean);
 
     let extractedToken = DEFAULT_TOKEN;
-    let extractedRoute: PortalRoute = 'auth';
+    let extractedRoute: PortalRoute | null = null;
 
     if (parts[0] === 'enrollment' && parts[1]) {
       extractedToken = parts[1];
       if (parts[2]) {
-        const candidate = parts[2] as PortalRoute;
-        const validRoutes: PortalRoute[] = [
-          'auth',
-          'congratulations',
-          'program',
-          'payment',
-          'pay',
-          'payment-success',
-          'emi',
-          'co-applicant',
-          'kyc-slot',
-          'kyc-readiness',
-          'kyc-confirmation',
-        ];
-        if (validRoutes.includes(candidate)) {
-          extractedRoute = candidate;
-        }
+        extractedRoute = normalizeRoute(parts[2]);
       }
     }
 
@@ -115,55 +142,104 @@ export default function App() {
     [token]
   );
 
-  // Initial Bootstrap: query /api/enrollment/:token
+  // Helper to merge canonical journey into enrollment state
+  const applyCanonicalJourney = useCallback((raw: any) => {
+    if (!raw) return;
+    // Normalize if wrapped in { success: true, journey: ... } or direct journey
+    const journey: EnrollmentJourney = raw.journey && !raw.learner ? raw.journey : raw;
+    if (!journey) return;
+
+    const isAuthed = Boolean(journey.authenticated ?? journey.authentication?.verified);
+    setState((prev) => ({
+      ...prev,
+      canonicalJourney: journey,
+      isAuthenticated: isAuthed,
+      learner: {
+        ...prev.learner,
+        name: journey.learner?.name ?? prev.learner?.name ?? 'Learner',
+        mobileMasked: journey.learner?.mobileMasked ?? prev.learner?.mobileMasked ?? '',
+        emailMasked: journey.learner?.emailMasked ?? prev.learner?.emailMasked ?? '',
+      },
+      program: {
+        ...prev.program,
+        name: journey.program?.name ?? prev.program?.name ?? 'NxtWave Program',
+        price: journey.program?.amountPayable ?? prev.program?.price ?? 112000,
+        amountPayable: journey.program?.amountPayable ?? prev.program?.amountPayable ?? 112000,
+      },
+      payment: {
+        ...prev.payment,
+        status: journey.payment?.status ?? prev.payment?.status ?? 'NOT_STARTED',
+        amountPaid: journey.payment?.amountPaid ?? prev.payment?.amountPaid ?? 0,
+        receiptId: journey.payment?.receiptId ?? prev.payment?.receiptId,
+        selectedMethod:
+          journey.financing && journey.financing.status !== 'NOT_STARTED'
+            ? 'NO_COST_EMI'
+            : prev.payment?.selectedMethod ?? 'FULL_PAYMENT',
+      },
+      coApplicant: {
+        exists: !!(journey.coApplicant?.name || journey.financing?.coApplicantName),
+        name: journey.coApplicant?.name || journey.financing?.coApplicantName || '',
+        relation: journey.coApplicant?.relation || journey.financing?.coApplicantRelationship || 'Parent',
+        mobileMasked: journey.coApplicant?.mobileMasked || journey.financing?.coApplicantPhone || '',
+      },
+      kyc: {
+        status: journey.kyc?.status ?? prev.kyc?.status ?? 'NOT_STARTED',
+        appointment: null,
+      },
+      financing: {
+        applicationId: journey.financing?.applicationId || 'APP-NA-2026-902',
+        lenderName: journey.financing?.lenderName || journey.financing?.nbfcName || 'Northern Arc',
+        status: journey.financing?.status || 'NOT_STARTED',
+        appliedAmount: journey.financing?.appliedAmount || 112000,
+        approvedAmount: journey.financing?.approvedAmount || 112000,
+        rejectionReason: journey.financing?.rejectionReason,
+      },
+    }));
+  }, []);
+
+  // Initial Bootstrap: query /api/enrollment/:token/journey (Salesforce-authoritative)
   useEffect(() => {
     const { token: parsedToken, route: parsedRoute } = parsePath();
     setToken(parsedToken);
 
     const bootstrap = async () => {
       try {
-        const res = await fetch(`/api/enrollment/${parsedToken}`);
+        const res = await fetch(`/api/enrollment/${parsedToken}/journey`);
         const data = await res.json();
 
-        if (data.valid) {
-          const isAuthed = Boolean(data.authentication?.verified);
+        if (data && (data.journey || data.learner)) {
+          const canonical: EnrollmentJourney = data.journey || data;
+          applyCanonicalJourney(canonical);
 
-          setState((prev) => ({
-            ...prev,
-            token: parsedToken,
-            isAuthenticated: isAuthed,
-            learner: {
-              ...prev.learner,
-              ...(data.learner || {}),
-            },
-            program: {
-              ...prev.program,
-              ...(data.program || {}),
-            },
-          }));
+          const isAuthed = Boolean(canonical.authenticated ?? canonical.authentication?.verified);
+          const serverRoute = normalizeRoute(canonical.journey?.recommendedRoute);
 
-          // Route security check: cannot access subsequent pages without auth
           if (!isAuthed) {
             setCurrentRoute('auth');
             if (window.location.pathname !== `/enrollment/${parsedToken}/auth`) {
-              window.history.replaceState(
-                null,
-                '',
-                `/enrollment/${parsedToken}/auth`
-              );
+              window.history.replaceState(null, '', `/enrollment/${parsedToken}/auth`);
             }
           } else {
-            // Authenticated: respect parsedRoute if not 'auth'
-            if (parsedRoute === 'auth') {
-              setCurrentRoute('congratulations');
-              window.history.replaceState(
-                null,
-                '',
-                `/enrollment/${parsedToken}/congratulations`
-              );
-            } else {
-              setCurrentRoute(parsedRoute);
+            // If user explicitly navigated to a specific valid route, respect it; otherwise use server recommended
+            const targetRoute = parsedRoute && parsedRoute !== 'auth' ? parsedRoute : serverRoute;
+            setCurrentRoute(targetRoute);
+            if (window.location.pathname !== `/enrollment/${parsedToken}/${targetRoute}`) {
+              window.history.replaceState(null, '', `/enrollment/${parsedToken}/${targetRoute}`);
             }
+          }
+        } else {
+          // Fallback to legacy endpoint if journey endpoint returned error
+          const fallbackRes = await fetch(`/api/enrollment/${parsedToken}`);
+          const fallbackData = await fallbackRes.json();
+          if (fallbackData.valid) {
+            const isAuthed = Boolean(fallbackData.authentication?.verified);
+            setState((prev) => ({
+              ...prev,
+              isAuthenticated: isAuthed,
+              learner: { ...prev.learner, ...(fallbackData.learner || {}) },
+              program: { ...prev.program, ...(fallbackData.program || {}) },
+            }));
+            setCurrentRoute(isAuthed ? 'program' : 'auth');
           }
         }
       } catch (err) {
@@ -174,7 +250,7 @@ export default function App() {
     };
 
     bootstrap();
-  }, [parsePath]);
+  }, [applyCanonicalJourney, parsePath]);
 
   // Handle browser back/forward buttons
   useEffect(() => {
@@ -182,7 +258,7 @@ export default function App() {
       const { route: poppedRoute } = parsePath();
       if (!state.isAuthenticated && poppedRoute !== 'auth') {
         setCurrentRoute('auth');
-      } else {
+      } else if (poppedRoute) {
         setCurrentRoute(poppedRoute);
       }
     };
@@ -192,17 +268,23 @@ export default function App() {
   }, [parsePath, state.isAuthenticated]);
 
   // -------------------------------------------------------------------
-  // Route Navigation Handlers
+  // Route Navigation & State Handlers
   // -------------------------------------------------------------------
-  const handleAuthSuccess = (learnerName: string) => {
-    setState((prev) => ({
-      ...prev,
-      isAuthenticated: true,
-      learner: {
-        ...prev.learner,
-        name: learnerName,
-      },
-    }));
+  const handleAuthSuccess = (payload: any) => {
+    if (payload && typeof payload === 'object') {
+      applyCanonicalJourney(payload);
+      setState((prev) => ({ ...prev, isAuthenticated: true }));
+    } else {
+      const name = typeof payload === 'string' ? payload : 'Learner';
+      setState((prev) => ({
+        ...prev,
+        isAuthenticated: true,
+        learner: {
+          ...prev.learner,
+          name,
+        },
+      }));
+    }
     navigateTo('congratulations');
   };
 
@@ -241,44 +323,37 @@ export default function App() {
         paidAt,
       },
     }));
-    navigateTo('payment-success');
+    navigateTo('class-access');
   };
 
-  const handleCoApplicantSaved = (coApplicantData: {
-    relation: string;
-    name: string;
-    mobile: string;
-  }) => {
-    setState((prev) => ({
-      ...prev,
-      coApplicant: {
-        exists: true,
-        name: coApplicantData.name,
-        relation: coApplicantData.relation,
-        mobileMasked: `${coApplicantData.mobile.slice(0, 2)}•••••${coApplicantData.mobile.slice(-3)}`,
-      },
-    }));
-    navigateTo('kyc-slot');
-  };
-
-  const handleKycSlotBooked = (slot: KycSlot) => {
-    setState((prev) => ({
-      ...prev,
-      kyc: {
-        status: 'SCHEDULED',
-        appointment: {
-          slotId: slot.id,
-          dateLabel: slot.dateLabel,
-          scheduledDate: slot.date,
-          scheduledTime: slot.displayTime,
-          scheduledStart: `${slot.date}T${slot.startTime}:00+05:30`,
-          scheduledEnd: `${slot.date}T${slot.endTime}:00+05:30`,
-          coApplicantName: prev.coApplicant.name || 'Co-Applicant',
-          coApplicantRelation: prev.coApplicant.relation || 'Parent',
+  const handleCoApplicantSaved = (coApplicantData: any) => {
+    if (coApplicantData?.journey || coApplicantData?.learner) {
+      applyCanonicalJourney(coApplicantData);
+    } else {
+      setState((prev) => ({
+        ...prev,
+        coApplicant: {
+          exists: true,
+          name: coApplicantData?.name || '',
+          relation: coApplicantData?.relation || 'Parent',
+          mobileMasked: coApplicantData?.mobile
+            ? `${coApplicantData.mobile.slice(0, 2)}•••••${coApplicantData.mobile.slice(-3)}`
+            : prev.coApplicant.mobileMasked,
         },
-      },
-    }));
-    navigateTo('kyc-readiness');
+      }));
+    }
+    navigateTo('kyc');
+  };
+
+  const handleJourneyUpdated = (journey: EnrollmentJourney) => {
+    applyCanonicalJourney(journey);
+    const recRoute = normalizeRoute(journey.journey.recommendedRoute);
+    navigateTo(recRoute);
+  };
+
+  const handleResetSession = () => {
+    setCurrentRoute('auth');
+    window.location.reload();
   };
 
   if (isInitializing) {
@@ -302,11 +377,11 @@ export default function App() {
       {/* NxtWave Portal Header */}
       <NxtWaveHeader
         currentRoute={currentRoute}
-        learnerName={state.learner.name}
+        learnerName={state.learner?.name || 'Learner'}
         onOpenSupport={() => setIsSupportOpen(true)}
       />
 
-      {/* Progress Indicator (only visible after initial auth or to show current stage) */}
+      {/* Progress Indicator */}
       <ProgressIndicator
         currentRoute={currentRoute}
         paymentMethod={state.payment.selectedMethod}
@@ -406,7 +481,7 @@ export default function App() {
             >
               <PaymentSuccessPage
                 state={state}
-                onDone={() => navigateTo('program')}
+                onDone={() => navigateTo('class-access')}
               />
             </motion.div>
           )}
@@ -444,52 +519,58 @@ export default function App() {
             </motion.div>
           )}
 
-          {currentRoute === 'kyc-slot' && (
+          {currentRoute === 'kyc' && (
             <motion.div
-              key="kyc-slot"
+              key="kyc"
               initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3 }}
             >
-              <KycSlotPage
+              <KycPage
                 state={state}
                 token={token}
-                onSlotBooked={handleKycSlotBooked}
+                onUpdateJourney={handleJourneyUpdated}
+                onContinue={() => navigateTo('nbfc-status')}
                 onBack={() => navigateTo('co-applicant')}
+                onSwitchToDirectPay={() => navigateTo('payment')}
+                onSwitchCoApplicant={() => navigateTo('co-applicant')}
               />
             </motion.div>
           )}
 
-          {currentRoute === 'kyc-readiness' && (
+          {currentRoute === 'nbfc-status' && (
             <motion.div
-              key="kyc-readiness"
+              key="nbfc-status"
               initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3 }}
             >
-              <KycReadinessPage
+              <NbfcStatusPage
                 state={state}
-                onReady={() => navigateTo('kyc-confirmation')}
-                onReschedule={() => navigateTo('kyc-slot')}
+                token={token}
+                onUpdateJourney={handleJourneyUpdated}
+                onComplete={() => navigateTo('class-access')}
+                onBack={() => navigateTo('kyc')}
+                onSwitchCoApplicant={() => navigateTo('co-applicant')}
+                onSwitchToDirectPay={() => navigateTo('payment')}
               />
             </motion.div>
           )}
 
-          {currentRoute === 'kyc-confirmation' && (
+          {currentRoute === 'class-access' && (
             <motion.div
-              key="kyc-confirmation"
+              key="class-access"
               initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3 }}
             >
-              <KycConfirmationPage
+              <ClassAccessPage
                 state={state}
-                onDone={() => navigateTo('program')}
-                onReschedule={() => navigateTo('kyc-slot')}
-                onContactSupport={() => setIsSupportOpen(true)}
+                token={token}
+                onResetSession={handleResetSession}
               />
             </motion.div>
           )}
@@ -503,7 +584,7 @@ export default function App() {
       <SupportModal
         isOpen={isSupportOpen}
         onClose={() => setIsSupportOpen(false)}
-        learnerName={state.learner.name}
+        learnerName={state.learner?.name || 'Learner'}
       />
 
       {/* Footer */}
@@ -518,7 +599,7 @@ export default function App() {
             <button
               type="button"
               onClick={() => setIsSupportOpen(true)}
-              className="hover:text-[#0B63E5] underline hover:no-underline"
+              className="hover:text-[#0B63E5] underline hover:no-underline cursor-pointer"
             >
               Support Helpline
             </button>
