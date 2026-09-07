@@ -30,6 +30,22 @@ interface NbfcStatusPageProps {
   onSwitchToDirectPay: () => void;
 }
 
+export interface NbfcChildRecordItem {
+  id: string;
+  nbfcName: string;
+  appId: string | null;
+  facilityAmount: number;
+  facilityAmountFormatted: string;
+  appliedLoanAmount: number;
+  approvedLoanAmount: number;
+  studentPhone: string | null;
+  linkedRecordId: string | null;
+  isActive: boolean;
+  coApplicantName: string | null;
+  coApplicantPhone: string | null;
+  coApplicantRelation: string | null;
+}
+
 // Normalized NBFC shape from the API
 interface NbfcNormalized {
   statusCode: string;
@@ -44,6 +60,7 @@ interface NbfcNormalized {
   classAccessEta: string | null;
   lastUpdated: string;
   rawStatus: string | null;
+  allNbfcs?: NbfcChildRecordItem[];
 }
 
 export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
@@ -532,6 +549,67 @@ export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
                   ₹{appliedAmount.toLocaleString('en-IN')} disbursed directly to NxtWave Disruptive Technologies. Your learner access is ready to activate.
                 </p>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* MULTIPLE NBFC APPLICATIONS & CO-APPLICANTS DISPLAY */}
+        {nbfcData?.allNbfcs && nbfcData.allNbfcs.length > 0 && (
+          <div className="border border-slate-200 rounded-xl p-5 mb-6 text-left bg-slate-50/60">
+            <div className="flex items-center justify-between mb-3 border-b border-slate-200 pb-2">
+              <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-[#0B63E5]" />
+                <span>Financing Applications & Partners ({nbfcData.allNbfcs.length})</span>
+              </h3>
+              <span className="text-[10px] text-slate-500 font-mono">SOQL Linked Records</span>
+            </div>
+
+            <div className="space-y-3">
+              {nbfcData.allNbfcs.map((item) => (
+                <div
+                  key={item.id}
+                  className={`p-3.5 rounded-xl border transition-all ${
+                    item.isActive
+                      ? 'bg-white border-[#0B63E5] ring-2 ring-blue-100 shadow-xs'
+                      : 'bg-white/80 border-slate-200 text-slate-600'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-xs text-slate-900">{item.nbfcName}</span>
+                      {item.isActive ? (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 font-bold border border-blue-200">
+                          Active Primary Journey
+                        </span>
+                      ) : (
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-slate-100 text-slate-500 font-medium">
+                          Linked Application
+                        </span>
+                      )}
+                    </div>
+                    {item.facilityAmount > 0 && (
+                      <span className="text-xs font-bold text-emerald-700 font-mono">
+                        Facility Amount: {item.facilityAmountFormatted}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-mono text-slate-600 mt-2 pt-2 border-t border-slate-100">
+                    <div>
+                      <span className="text-slate-400 font-sans">Master App ID:</span>{' '}
+                      <strong>{item.appId || 'N/A'}</strong>
+                    </div>
+                    {item.coApplicantName && (
+                      <div>
+                        <span className="text-slate-400 font-sans">Co-Applicant:</span>{' '}
+                        <strong>
+                          {item.coApplicantName} ({item.coApplicantPhone || 'N/A'})
+                        </strong>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}

@@ -1,6 +1,7 @@
 import type { SalesforceOnboardingRecord } from './types';
 import { supabaseAdapter } from '../supabase/supabaseAdapter';
 import { salesforceRestClient } from './salesforceRestClient';
+export { salesforceRestClient };
 
 export interface SalesforceClientInterface {
   getRecordByToken(token: string): Promise<SalesforceOnboardingRecord | null>;

@@ -365,6 +365,39 @@ export class SalesforceRestClient {
     const records = await this.query(soql);
     return (records || []).map((r: any) => this.normalizeRecord(r, r.userId__c || r.Id));
   }
+
+  /**
+   * Queries related NBFC_Onboarding__c records for a learner via SOQL.
+   * Matches by student_phone_number__c or Academy_Onboarding_PRE_L__c lookup.
+   */
+  public async getNbfcRecordsForLearner(
+    activeRecordId: string,
+    phone?: string | null
+  ): Promise<any[]> {
+    if (!activeRecordId && !phone) return [];
+
+    const cleanPhone = phone ? phone.replace(/\D/g, '').slice(-10) : '';
+    const clauses: string[] = [];
+    if (activeRecordId) {
+      clauses.push(`Academy_Onboarding_PRE_L__c = '${activeRecordId.replace(/['"\\]/g, '')}'`);
+    }
+    if (cleanPhone && cleanPhone.length >= 7) {
+      clauses.push(`student_phone_number__c LIKE '%${cleanPhone}%'`);
+    }
+
+    if (clauses.length === 0) return [];
+
+    const soql = `
+      SELECT Id, Name, Master_App_ID__c, Master_Applied_Loan_Amount__c, Master_Approved_Loan_Amount__c, student_phone_number__c, Academy_Onboarding_PRE_L__c, Co_Applicant_Name_PRE__c, Co_Applicant_Phone_Number_PRE__c, Relation_With_The_Co_Applicant_PRE__c, CreatedDate, LastModifiedDate
+      FROM NBFC_Onboarding__c
+      WHERE ${clauses.join(' OR ')}
+      ORDER BY CreatedDate DESC
+      LIMIT 20
+    `.trim().replace(/\s+/g, ' ');
+
+    const records = await this.query(soql);
+    return records || [];
+  }
 }
 
 export const salesforceRestClient = new SalesforceRestClient();

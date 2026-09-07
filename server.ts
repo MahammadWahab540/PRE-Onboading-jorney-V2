@@ -6,7 +6,7 @@ import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
 import * as googleTTS from 'google-tts-api';
 
-import { salesforceClient } from './src/server/adapters/salesforce/client';
+import { salesforceClient, salesforceRestClient } from './src/server/adapters/salesforce/client';
 import {
   mapSalesforceToJourney,
   maskPhone,
@@ -651,6 +651,37 @@ app.get('/api/enrollment/:token/nbfc-status', async (req, res) => {
     const journey = mapSalesforceToJourney(record, token);
     const normalized = normalizeNbfcStatus(record as any);
 
+    // Query related NBFC_Onboarding__c records using SOQL (SOQL query 1 & 2)
+    const nbfcChildRecords = await salesforceRestClient.getNbfcRecordsForLearner(
+      record.Id,
+      record.PHONE_NUMBER__c || record.Student_WhatsApp_Number__c || record.Student_Number__c
+    );
+
+    const allNbfcs = nbfcChildRecords.map((c: any) => {
+      const facilityAmountVal = c.Master_Applied_Loan_Amount__c || c.Master_Approved_Loan_Amount__c || '0';
+      return {
+        id: c.Id,
+        nbfcName: c.Name || 'Partner NBFC',
+        appId: c.Master_App_ID__c || null,
+        facilityAmount: Number(facilityAmountVal) || 0,
+        facilityAmountFormatted: `₹${(Number(facilityAmountVal) || 0).toLocaleString('en-IN')}`,
+        appliedLoanAmount: Number(c.Master_Applied_Loan_Amount__c || 0),
+        approvedLoanAmount: Number(c.Master_Approved_Loan_Amount__c || 0),
+        studentPhone: c.student_phone_number__c || null,
+        linkedRecordId: c.Academy_Onboarding_PRE_L__c || null,
+        isActive: c.Academy_Onboarding_PRE_L__c === record.Id,
+        coApplicantName: c.Co_Applicant_Name_PRE__c || null,
+        coApplicantPhone: c.Co_Applicant_Phone_Number_PRE__c || null,
+        coApplicantRelation: c.Relation_With_The_Co_Applicant_PRE__c || null,
+      };
+    });
+
+    // If an active NBFC child record exists with a Facility Amount > 0, set appliedAmount to that Facility Amount
+    const activeNbfcChild = allNbfcs.find((n) => n.isActive && n.facilityAmount > 0);
+    if (activeNbfcChild && journey.financing) {
+      journey.financing.appliedAmount = activeNbfcChild.facilityAmount;
+    }
+
     return res.json({
       success: true,
       financing: journey.financing,
@@ -665,6 +696,7 @@ app.get('/api/enrollment/:token/nbfc-status', async (req, res) => {
         classAccessEta: normalized.classAccessEta,
         lastUpdated: normalized.lastUpdated,
         rawStatus: normalized.rawStatus,
+        allNbfcs,
       },
     });
   } catch (err: any) {
