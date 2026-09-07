@@ -60,6 +60,50 @@ app.get('/api/enrollment/:token/journey', async (req, res) => {
       { ...record, Authentication_Verified__c: isAuthenticated },
       token
     );
+
+    // Query related child NBFC records to ensure financing.appliedAmount & applicationId reflect live SOQL data
+    try {
+      const nbfcRecords = await salesforceRestClient.getNbfcRecordsForLearner(
+        record.Id,
+        record.PHONE_NUMBER__c || record.Student_WhatsApp_Number__c || record.Student_Number__c
+      );
+      if (nbfcRecords && nbfcRecords.length > 0) {
+        const activeChild =
+          nbfcRecords.find(
+            (c: any) => c.Academy_Onboarding_PRE_L__c === record.Id && Number(c.Master_Applied_Loan_Amount__c) > 0
+          ) ||
+          nbfcRecords.find((c: any) => Number(c.Master_Applied_Loan_Amount__c) > 0) ||
+          nbfcRecords[0];
+
+        if (activeChild) {
+          const appliedAmt = Number(activeChild.Master_Applied_Loan_Amount__c || activeChild.Master_Approved_Loan_Amount__c || 0);
+          if (appliedAmt > 0) {
+            if (!journey.financing) {
+              journey.financing = {
+                applied: true,
+                appliedAmount: appliedAmt,
+                nbfcName: activeChild.Name || 'NORTHERN ARC',
+                applicationId: activeChild.Master_App_ID__c || `NBFC-${record.Id.slice(-6).toUpperCase()}`,
+                status: 'UNDER_REVIEW',
+                statusLabel: 'Under Review',
+                approvedAmount: Number(activeChild.Master_Approved_Loan_Amount__c || appliedAmt),
+                approvedTenure: '6 Months',
+                emiAmountMonthly: 0,
+                emiTenure: '6 Months',
+              };
+            } else {
+              journey.financing.appliedAmount = appliedAmt;
+              if (activeChild.Master_App_ID__c) {
+                journey.financing.applicationId = activeChild.Master_App_ID__c;
+              }
+            }
+          }
+        }
+      }
+    } catch (e: any) {
+      console.warn('[EnrollmentSync] Warning fetching child NBFC records for journey:', e.message);
+    }
+
     return res.json({ success: true, journey });
   } catch (err: any) {
     console.error('[EnrollmentSync] Authoritative journey fetch error:', err.message);

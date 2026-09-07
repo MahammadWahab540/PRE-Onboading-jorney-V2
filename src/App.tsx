@@ -220,11 +220,11 @@ export default function App() {
         appointment: null,
       },
       financing: {
-        applicationId: journey.financing?.applicationId || 'APP-NA-2026-902',
+        applicationId: journey.financing?.applicationId || 'N/A',
         lenderName: journey.financing?.lenderName || journey.financing?.nbfcName || 'Northern Arc',
         status: journey.financing?.status || 'NOT_STARTED',
-        appliedAmount: journey.financing?.appliedAmount || 112000,
-        approvedAmount: journey.financing?.approvedAmount || 112000,
+        appliedAmount: journey.financing?.appliedAmount || 0,
+        approvedAmount: journey.financing?.approvedAmount || 0,
         rejectionReason: journey.financing?.rejectionReason,
       },
     }));
