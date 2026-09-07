@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import {
   Building2,
@@ -63,6 +63,12 @@ export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
   const [isLoadingNbfc, setIsLoadingNbfc] = useState(false);
   const [nbfcError, setNbfcError] = useState<string | null>(null);
 
+  // Keep a stable ref for onUpdateJourney to prevent re-triggering effects
+  const onUpdateJourneyRef = useRef(onUpdateJourney);
+  useEffect(() => {
+    onUpdateJourneyRef.current = onUpdateJourney;
+  }, [onUpdateJourney]);
+
   // Derive display values from live NBFC data, falling back to journey state
   const lenderName = nbfcData?.activeLender || financing?.lenderName || 'Finance partner is being assigned';
   const status = (nbfcData?.statusCode || financing?.status || 'UNDER_REVIEW') as string;
@@ -71,33 +77,53 @@ export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
   const emiPerMonth = Math.round(approvedAmount / 6);
 
   // Fetch latest NBFC status from Salesforce (via normalized endpoint)
-  const fetchLatestNbfcStatus = useCallback(async () => {
+  const fetchLatestNbfcStatus = useCallback(async (isSilent = false) => {
     if (!token) return;
-    setIsLoadingNbfc(true);
+    if (!isSilent) setIsLoadingNbfc(true);
     setNbfcError(null);
     try {
       const res = await fetch(`/api/enrollment/${token}/nbfc-status`);
       const data = await res.json();
       if (res.ok && data.nbfc) {
         setNbfcData(data.nbfc as NbfcNormalized);
-        if (data.journey) onUpdateJourney(data.journey);
-      } else {
+        if (data.journey) onUpdateJourneyRef.current(data.journey);
+      } else if (!isSilent) {
         setNbfcError(data.error || 'Failed to load financing status');
       }
     } catch {
-      setNbfcError('Unable to connect. Please check your internet and try again.');
+      if (!isSilent) {
+        setNbfcError('Unable to connect. Please check your internet and try again.');
+      }
     } finally {
-      setIsLoadingNbfc(false);
+      if (!isSilent) setIsLoadingNbfc(false);
     }
-  }, [token, onUpdateJourney]);
+  }, [token]);
 
-  // Initial fetch + re-fetch on window focus (user returns from CCBP KYC / EMI portal)
+  // 2-Stage Sync Policy on portal load:
+  // 1st sync runs immediately on mount
+  // 2nd sync runs after 2 seconds to capture/lock-in updated Salesforce status
+  // No second-by-second continuous loop
   useEffect(() => {
-    fetchLatestNbfcStatus();
-    const handleFocus = () => fetchLatestNbfcStatus();
+    let secondSyncTimer: NodeJS.Timeout;
+
+    // 1st Sync (Immediate)
+    fetchLatestNbfcStatus(false);
+
+    // 2nd Sync (After 2 seconds)
+    secondSyncTimer = setTimeout(() => {
+      fetchLatestNbfcStatus(true);
+    }, 2000);
+
+    const handleFocus = () => {
+      fetchLatestNbfcStatus(true);
+    };
     window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
-  }, [fetchLatestNbfcStatus]);
+
+    return () => {
+      clearTimeout(secondSyncTimer);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [token, fetchLatestNbfcStatus]);
 
 
   const [isProcessing, setIsProcessing] = useState(false);
@@ -586,7 +612,7 @@ export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
             {/* Manual Refresh */}
             <button
               type="button"
-              onClick={fetchLatestNbfcStatus}
+              onClick={() => fetchLatestNbfcStatus(false)}
               disabled={isLoadingNbfc}
               className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
             >
