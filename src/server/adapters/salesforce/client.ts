@@ -4,6 +4,7 @@ import { salesforceRestClient } from './salesforceRestClient';
 
 export interface SalesforceClientInterface {
   getRecordByToken(token: string): Promise<SalesforceOnboardingRecord | null>;
+  getAuthoritativeEnrollmentRecord(token: string): Promise<SalesforceOnboardingRecord | null>;
   findRecordByMobile(cleanPhone: string): Promise<SalesforceOnboardingRecord | null>;
   updateRecord(
     token: string,
@@ -24,8 +25,46 @@ class SalesforceClient implements SalesforceClientInterface {
 
   constructor() {
     console.log(
-      `[Data Adapter] Initialized. Mode=${process.env.DATA_SOURCE || 'salesforce'}, SF Configured=${salesforceRestClient.isConfigured}, Supabase Active=${supabaseAdapter.ready}`
+      `[Data Adapter]\n` +
+        `  DATA_SOURCE=${process.env.DATA_SOURCE || 'salesforce'}\n` +
+        `  Salesforce configured=${salesforceRestClient.isConfigured}\n` +
+        `  Supabase configured=${supabaseAdapter.ready}`
     );
+  }
+
+  /**
+   * Authoritative Enrollment Record fetch.
+   * When DATA_SOURCE=salesforce, directly queries live Salesforce REST API.
+   * Does NOT fall through to stale Supabase/in-memory caches on empty or failed responses.
+   */
+  public async getAuthoritativeEnrollmentRecord(
+    token: string
+  ): Promise<SalesforceOnboardingRecord | null> {
+    if (!token) return null;
+
+    if (process.env.DATA_SOURCE === 'salesforce' || !process.env.DATA_SOURCE) {
+      if (!salesforceRestClient.isConfigured) {
+        throw new Error(
+          'Salesforce credentials are not configured in environment (SF_CLIENT_ID / SF_CLIENT_SECRET missing).'
+        );
+      }
+
+      try {
+        const sfRecord = await salesforceRestClient.getRecordByToken(token);
+        if (sfRecord) {
+          this.inMemoryStore.set(token, sfRecord);
+          return sfRecord;
+        }
+        // Salesforce query returned no record -> return null (404)
+        return null;
+      } catch (err: any) {
+        console.error('[Salesforce] Authoritative live fetch failed for token:', token, err.message);
+        throw new Error(`Authoritative Salesforce query failed: ${err.message}`);
+      }
+    }
+
+    // Fallback for non-Salesforce environments
+    return this.getRecordByToken(token);
   }
 
   public async getRecordByToken(token: string): Promise<SalesforceOnboardingRecord | null> {

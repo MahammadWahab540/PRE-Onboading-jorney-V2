@@ -215,4 +215,23 @@ console.log('--- RUNNING ORCHESTRATOR & FIXTURE RESOLUTION TESTS ---');
   console.log('✓ 17. Lead a03fv0000014m0zAAA sync to /kyc passed');
 }
 
-console.log('ALL 17 SUITES PASSED CLEANLY! ✨');
+// 18. Case & whitespace variation test for Onboarding_Status__c = "KYC Submitted"
+{
+  const variations = ['KYC Submitted', 'kyc submitted', ' KYC Submitted '];
+  for (const statusVar of variations) {
+    const rec = {
+      Id: 'a03fv0000014m0zAAA',
+      Onboarding_Status__c: statusVar,
+      Stage_PRE__c: 'congratulations',
+      Authentication_Verified__c: true,
+    };
+    const journey = mapSalesforceToJourney(rec as any, 'a03fv0000014m0zAAA');
+    assert.strictEqual(journey.kyc?.status, 'SUBMITTED');
+    assert.strictEqual(journey.journey.recommendedRoute, 'kyc');
+    assert.strictEqual(journey.journey.resolvedStep, 'kyc');
+    assert.strictEqual(journey.journey.stepIndex, 5);
+  }
+  console.log('✓ 18. Case and whitespace variations for KYC Submitted passed');
+}
+
+console.log('ALL 18 SUITES PASSED CLEANLY! ✨');

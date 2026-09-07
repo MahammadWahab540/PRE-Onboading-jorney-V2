@@ -117,12 +117,7 @@ export class SalesforceRestClient {
     Payment_Plan_PRE__c, Current_Payment_Status__c, Down_Payment_Done_On_PRE__c, DP_Order_ID_PRE__c,
     Applied_Loan_Amount__c, Total_Tenure_PRE__c, Eligible_NBFCs_PRE__c, Choose_NBFC_PRE__c,
     Disbursed_Amount_PRE__c, Disbursed_Date_Time__c, Disbursed_NBFC_Name__c, Total_Disbursed_Loan_Amount__c,
-    NBFC_Status__c, Status_Of_Decision_in_NBFC_PRE__c,
-    Northern_Arc_Overall_Stages__c, Northern_Arc_Remarks__c, Northern_Arc_Rejected_Reasons__c,
-    Fibe_Overall_Stages__c, Finz_Overall_Stages__c,
-    Gyandhan_Overall_Stages__c, JODO_NBFC_Status__c,
-    Jodo_Status__c, Jodo_Approved__c, Jodo_Selected__c,
-    LMS_Access_Status__c, LMS_Access_URL__c,
+    NBFC_Status__c, Status_Of_Decision_in_NBFC_PRE__c, Jodo_Status__c, Jodo_Approved__c, Jodo_Selected__c,
     Co_Applicant_Name__c, Co_Applicant_Phone_Number_PRE__c, Co_Applicant_Mail_ID_PRE__c,
     Relation_with_the_Co_Applicant__c, Co_Applicant_Age_PRE__c, Co_Applicant_Employment_Type_PRE__c,
     Co_applicant_Occupation_PRE__c, Co_Applicant_Monthly_Income_PRE__c, Co_Applicant_s_Monthly_Income_Range_PRE__c,
@@ -179,7 +174,14 @@ export class SalesforceRestClient {
     const records = await this.query(soql);
     if (!records || records.length === 0) return null;
 
-    return this.normalizeRecord(records[0], token);
+    const normalized = this.normalizeRecord(records[0], token);
+    console.log('[EnrollmentSFRead]', {
+      recordId: normalized.Id,
+      onboardingStatus: normalized.Onboarding_Status__c,
+      stagePre: normalized.Stage_PRE__c,
+      lastModifiedDate: (normalized as any).LastModifiedDate || (records[0] as any).LastModifiedDate,
+    });
+    return normalized;
   }
 
   /**

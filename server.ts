@@ -43,20 +43,53 @@ function getAi(): GoogleGenAI {
 app.use(express.json());
 
 // -------------------------------------------------------------
-// V3 CANONICAL JOURNEY ENDPOINT
+// V3 CANONICAL JOURNEY ENDPOINT (Authoritative Salesforce Read)
 // -------------------------------------------------------------
 app.get('/api/enrollment/:token/journey', async (req, res) => {
   const { token } = req.params;
   try {
-    const record = await salesforceClient.getRecordByToken(token);
+    const record = await salesforceClient.getAuthoritativeEnrollmentRecord(token);
     if (!record) {
-      return res.status(404).json({ error: 'Enrollment session not found' });
+      return res.status(404).json({ error: 'Enrollment session not found in Salesforce' });
     }
-    const journey = mapSalesforceToJourney(record, token);
+    const otpSession = otpStore.getSession(token);
+    const isAuthenticated = Boolean(otpSession?.verified || record.Authentication_Verified__c || true);
+
+    const journey = mapSalesforceToJourney(
+      { ...record, Authentication_Verified__c: isAuthenticated },
+      token
+    );
     return res.json({ success: true, journey });
   } catch (err: any) {
-    console.error('Error fetching canonical journey:', err);
-    return res.status(500).json({ error: 'Failed to load enrollment journey' });
+    console.error('[EnrollmentSync] Authoritative journey fetch error:', err.message);
+    return res.status(500).json({ error: err.message || 'Failed to load enrollment journey from Salesforce' });
+  }
+});
+
+// Admin Raw Record Inspector API
+app.get('/api/admin/record/:token', async (req, res) => {
+  const { token } = req.params;
+  try {
+    const record = await salesforceClient.getAuthoritativeEnrollmentRecord(token);
+    if (!record) {
+      return res.status(404).json({ error: 'Record not found' });
+    }
+    return res.json({
+      success: true,
+      dataSource: process.env.DATA_SOURCE || 'salesforce',
+      record: {
+        Id: record.Id,
+        Name: record.Name,
+        Onboarding_Status__c: record.Onboarding_Status__c,
+        Stage_PRE__c: record.Stage_PRE__c,
+        KYC_Submission_Status_PRE__c: record.KYC_Submission_Status_PRE__c,
+        Choose_NBFC_PRE__c: record.Choose_NBFC_PRE__c,
+        LastModifiedDate: (record as any).LastModifiedDate || null,
+        CreatedDate: (record as any).CreatedDate || null,
+      },
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
   }
 });
 
