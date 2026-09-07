@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import {
   Building2,
@@ -30,6 +30,22 @@ interface NbfcStatusPageProps {
   onSwitchToDirectPay: () => void;
 }
 
+// Normalized NBFC shape from the API
+interface NbfcNormalized {
+  statusCode: string;
+  statusLabel: string;
+  activeLender: string;
+  userMessage: string;
+  callToAction: {
+    label: string;
+    action: string;
+    primary: boolean;
+  } | null;
+  classAccessEta: string | null;
+  lastUpdated: string;
+  rawStatus: string | null;
+}
+
 export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
   state,
   token,
@@ -42,11 +58,47 @@ export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
   const prefersReducedMotion = useReducedMotion();
   const financing = state.financing || state.canonicalJourney?.financing;
 
-  const lenderName = financing?.lenderName || 'Northern Arc';
-  const status = financing?.status || 'UNDER_REVIEW';
+  // Normalized NBFC state (fetched live from Salesforce)
+  const [nbfcData, setNbfcData] = useState<NbfcNormalized | null>(null);
+  const [isLoadingNbfc, setIsLoadingNbfc] = useState(false);
+  const [nbfcError, setNbfcError] = useState<string | null>(null);
+
+  // Derive display values from live NBFC data, falling back to journey state
+  const lenderName = nbfcData?.activeLender || financing?.lenderName || 'Finance partner is being assigned';
+  const status = (nbfcData?.statusCode || financing?.status || 'UNDER_REVIEW') as string;
   const appliedAmount = financing?.appliedAmount || 112000;
   const approvedAmount = financing?.approvedAmount || appliedAmount;
   const emiPerMonth = Math.round(approvedAmount / 6);
+
+  // Fetch latest NBFC status from Salesforce (via normalized endpoint)
+  const fetchLatestNbfcStatus = useCallback(async () => {
+    if (!token) return;
+    setIsLoadingNbfc(true);
+    setNbfcError(null);
+    try {
+      const res = await fetch(`/api/enrollment/${token}/nbfc-status`);
+      const data = await res.json();
+      if (res.ok && data.nbfc) {
+        setNbfcData(data.nbfc as NbfcNormalized);
+        if (data.journey) onUpdateJourney(data.journey);
+      } else {
+        setNbfcError(data.error || 'Failed to load financing status');
+      }
+    } catch {
+      setNbfcError('Unable to connect. Please check your internet and try again.');
+    } finally {
+      setIsLoadingNbfc(false);
+    }
+  }, [token, onUpdateJourney]);
+
+  // Initial fetch + re-fetch on window focus (user returns from CCBP KYC / EMI portal)
+  useEffect(() => {
+    fetchLatestNbfcStatus();
+    const handleFocus = () => fetchLatestNbfcStatus();
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [fetchLatestNbfcStatus]);
+
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSupportModal, setShowSupportModal] = useState(false);
@@ -55,6 +107,7 @@ export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
     'Need help with auto-debit setup and document status.'
   );
   const [ticketSuccessMsg, setTicketSuccessMsg] = useState<string | null>(null);
+
 
   // Trigger NBFC Actions
   const handleNbfcAction = async (
@@ -219,12 +272,118 @@ export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
           </div>
         </div>
 
+        {/* ---- LIVE NBFC STATUS (Salesforce normalized) ---- */}
+
+        {/* Loading state */}
+        {isLoadingNbfc && !nbfcData && (
+          <div className="flex items-center gap-3 p-4 rounded-xl bg-blue-50 border border-blue-200 mb-6">
+            <RefreshCw className="w-5 h-5 text-blue-500 animate-spin shrink-0" />
+            <p className="text-sm text-blue-700 font-medium">Checking your latest finance status...</p>
+          </div>
+        )}
+
+        {/* Error state */}
+        {nbfcError && !isLoadingNbfc && (
+          <div className="flex items-start gap-3 p-4 rounded-xl bg-red-50 border border-red-200 mb-6">
+            <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm text-red-700 font-medium">{nbfcError}</p>
+              <button
+                type="button"
+                onClick={fetchLatestNbfcStatus}
+                className="mt-2 text-xs font-semibold text-red-600 underline"
+              >
+                Try again
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Normalized status card — rendered when we have live Salesforce data */}
+        {nbfcData && (
+          <div className={`p-4 rounded-xl border mb-6 text-left ${
+            nbfcData.statusCode === 'DISBURSED' ? 'bg-emerald-50 border-emerald-200' :
+            nbfcData.statusCode === 'APPROVED' ? 'bg-green-50 border-green-200' :
+            nbfcData.statusCode === 'EMI_SETUP_COMPLETED' ? 'bg-blue-50 border-blue-200' :
+            nbfcData.statusCode === 'DOCUMENTS_REQUIRED' ? 'bg-amber-50 border-amber-200' :
+            nbfcData.statusCode === 'REJECTED' ? 'bg-orange-50 border-orange-200' :
+            'bg-slate-50 border-slate-200'
+          }`}>
+            <div className="flex items-start gap-3">
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                nbfcData.statusCode === 'DISBURSED' ? 'bg-emerald-100 text-emerald-700' :
+                nbfcData.statusCode === 'APPROVED' ? 'bg-green-100 text-green-700' :
+                nbfcData.statusCode === 'EMI_SETUP_COMPLETED' ? 'bg-blue-100 text-blue-700' :
+                nbfcData.statusCode === 'DOCUMENTS_REQUIRED' ? 'bg-amber-100 text-amber-700' :
+                nbfcData.statusCode === 'REJECTED' ? 'bg-orange-100 text-orange-700' :
+                'bg-slate-100 text-slate-600'
+              }`}>
+                {nbfcData.statusCode === 'DISBURSED' ? <Sparkles className="w-4 h-4" /> :
+                 nbfcData.statusCode === 'APPROVED' ? <CheckCircle2 className="w-4 h-4" /> :
+                 nbfcData.statusCode === 'EMI_SETUP_COMPLETED' ? <Clock className="w-4 h-4" /> :
+                 nbfcData.statusCode === 'DOCUMENTS_REQUIRED' ? <AlertTriangle className="w-4 h-4" /> :
+                 nbfcData.statusCode === 'REJECTED' ? <RefreshCw className="w-4 h-4" /> :
+                 <Clock className="w-4 h-4" />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <span className={`text-[11px] font-bold uppercase tracking-wider ${
+                  nbfcData.statusCode === 'DISBURSED' ? 'text-emerald-700' :
+                  nbfcData.statusCode === 'APPROVED' ? 'text-green-700' :
+                  nbfcData.statusCode === 'EMI_SETUP_COMPLETED' ? 'text-blue-700' :
+                  nbfcData.statusCode === 'DOCUMENTS_REQUIRED' ? 'text-amber-700' :
+                  nbfcData.statusCode === 'REJECTED' ? 'text-orange-700' :
+                  'text-slate-600'
+                }`}>
+                  {nbfcData.statusLabel}
+                </span>
+                <p className="text-sm text-slate-700 mt-1 leading-relaxed">{nbfcData.userMessage}</p>
+                {nbfcData.classAccessEta && (
+                  <div className="flex items-center gap-1.5 mt-2">
+                    <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                    <span className="text-xs text-slate-500">Class Access: {nbfcData.classAccessEta}</span>
+                  </div>
+                )}
+                {/* CTA from normalized data */}
+                {nbfcData.callToAction && nbfcData.callToAction.action !== 'REFRESH' && nbfcData.callToAction.action !== 'NONE' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (nbfcData.callToAction?.action === 'SETUP_EMI') handleNbfcAction('SETUP_EMI');
+                      else if (nbfcData.callToAction?.action === 'RETRY_DOCUMENTS') handleNbfcAction('RETRY_DOCUMENTS');
+                      else if (nbfcData.callToAction?.action === 'CHANGE_CO_APPLICANT') onSwitchCoApplicant();
+                    }}
+                    className={`mt-3 px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+                      nbfcData.callToAction.primary
+                        ? 'bg-[#0B63E5] text-white hover:bg-blue-600'
+                        : 'border border-slate-300 text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    {nbfcData.callToAction.label}
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+              {/* Refresh button */}
+              <button
+                type="button"
+                onClick={fetchLatestNbfcStatus}
+                disabled={isLoadingNbfc}
+                title="Refresh status"
+                className="p-1.5 rounded-lg hover:bg-black/10 transition-colors disabled:opacity-50 shrink-0"
+              >
+                <RefreshCw className={`w-4 h-4 text-slate-500 ${isLoadingNbfc ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* -------------------------------------------------------------
             STAGE CALLOUT BANNERS
             ------------------------------------------------------------- */}
 
         {/* 1. REJECTED STATE */}
         {status === 'REJECTED' && (
+
           <div className="mb-6">
             <ActionRequiredCard
               title="Lender Credit Review Not Approved"
@@ -324,20 +483,6 @@ export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
                 <p className="text-xs text-slate-600 mt-1 leading-relaxed">
                   The credit underwriting desk is evaluating income records and credit score. Updates will be reflected automatically.
                 </p>
-
-                {/* Simulator for demo validation */}
-                <div className="mt-3 pt-3 border-t border-blue-200/60 flex items-center justify-between">
-                  <span className="text-[11px] text-slate-500">Test Simulator:</span>
-                  <button
-                    type="button"
-                    onClick={() => handleNbfcAction('SETUP_EMI')}
-                    disabled={isProcessing}
-                    className="text-xs font-bold text-[#0B63E5] hover:underline cursor-pointer flex items-center gap-1"
-                  >
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span>Simulate Approval Now</span>
-                  </button>
-                </div>
               </div>
             </div>
           </div>
@@ -437,27 +582,41 @@ export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
             <span>Back</span>
           </button>
 
-          {status === 'DISBURSED' ? (
-            <button
-              id="nbfc-continue-to-class-btn"
-              type="button"
-              onClick={onComplete}
-              className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-[#0B63E5] text-white text-xs sm:text-sm font-semibold hover:bg-blue-600 transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <span>Access Class Portal</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          ) : (
+          <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
+            {/* Manual Refresh */}
             <button
               type="button"
-              onClick={() => setShowSupportModal(true)}
-              className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-blue-200 text-xs font-semibold text-[#0B63E5] hover:bg-blue-50 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+              onClick={fetchLatestNbfcStatus}
+              disabled={isLoadingNbfc}
+              className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
             >
-              <PhoneCall className="w-3.5 h-3.5" />
-              <span>Need Help? Contact Counselor</span>
+              <RefreshCw className={`w-4 h-4 ${isLoadingNbfc ? 'animate-spin' : ''}`} />
+              <span>{isLoadingNbfc ? 'Refreshing...' : 'Refresh Status'}</span>
             </button>
-          )}
+
+            {status === 'DISBURSED' ? (
+              <button
+                id="nbfc-continue-to-class-btn"
+                type="button"
+                onClick={onComplete}
+                className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-[#0B63E5] text-white text-xs sm:text-sm font-semibold hover:bg-blue-600 transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span>Access Class Portal</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowSupportModal(true)}
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-blue-200 text-xs font-semibold text-[#0B63E5] hover:bg-blue-50 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <PhoneCall className="w-3.5 h-3.5" />
+                <span>Need Help? Contact Counselor</span>
+              </button>
+            )}
+          </div>
         </div>
+
       </motion.div>
 
       {/* SUPPORT TICKETING MODAL */}

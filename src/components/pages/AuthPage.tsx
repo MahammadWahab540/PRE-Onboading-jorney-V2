@@ -10,22 +10,26 @@ import {
   Sparkles,
 } from 'lucide-react';
 import type { EnrollmentState, EnrollmentJourney } from '../../types';
+import { resolveOnboarding } from '../../services/onboardingApi';
+import { normalizeIndianPhone } from '../../server/domain/phoneNormalizer';
 
 interface AuthPageProps {
   state: EnrollmentState;
   token: string;
   onSuccess: (journey: EnrollmentJourney) => void;
+  onTokenResolved?: (resolvedToken: string) => void;
   onApiError?: (msg: string) => void;
 }
 
-export const AuthPage: React.FC<AuthPageProps> = ({ state, token, onSuccess }) => {
+export const AuthPage: React.FC<AuthPageProps> = ({ state, token, onSuccess, onTokenResolved }) => {
   const prefersReducedMotion = useReducedMotion();
 
   // Stage 1: Mobile entry; Stage 2: OTP verification
   const [stage, setStage] = useState<'MOBILE' | 'OTP'>('MOBILE');
-  const [mobileNumber, setMobileNumber] = useState<string>('9876543210');
-  const [maskedMobile, setMaskedMobile] = useState<string>('+91 98•••••210');
+  const [mobileNumber, setMobileNumber] = useState<string>('');
+  const [maskedMobile, setMaskedMobile] = useState<string>('');
   const [activeToken, setActiveToken] = useState<string>(token);
+  const [devOtp, setDevOtp] = useState<string | null>(null);
 
   // OTP inputs state
   const [otp, setOtp] = useState<string[]>(['', '', '', '', '', '']);
@@ -45,12 +49,12 @@ export const AuthPage: React.FC<AuthPageProps> = ({ state, token, onSuccess }) =
     return () => clearInterval(timer);
   }, [stage, resendCountdown]);
 
-  // Stage 1 submit: Send OTP
+  // Stage 1 submit: Resolve active Salesforce record & Send OTP
   const handleSendOtp = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    const clean = mobileNumber.replace(/\D/g, '');
-    if (clean.length !== 10 || !/^[6-9]\d{9}$/.test(clean)) {
-      setErrorMessage('Please enter a valid 10-digit Indian mobile number starting with 6-9');
+    const clean = normalizeIndianPhone(mobileNumber);
+    if (!clean) {
+      setErrorMessage('Please enter a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9');
       return;
     }
 
@@ -58,28 +62,45 @@ export const AuthPage: React.FC<AuthPageProps> = ({ state, token, onSuccess }) =
     setErrorMessage(null);
 
     try {
+      // 1. Resolve Salesforce Active Record & Target Journey
+      const resolved = await resolveOnboarding(clean);
+      const resolvedRecordId = resolved.salesforce?.recordId;
+
+      if (!resolvedRecordId) {
+        setErrorMessage('Unable to find active enrollment for this mobile number. Please contact your admissions counselor.');
+        return;
+      }
+
+      setActiveToken(resolvedRecordId);
+      if (onTokenResolved) {
+        onTokenResolved(resolvedRecordId);
+      }
+
+      // 2. Dispatch OTP for this authoritative record
       const res = await fetch('/api/auth/send-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mobile: clean, token }),
+        body: JSON.stringify({ mobile: clean, token: resolvedRecordId }),
       });
       const data = await res.json();
 
       if (!res.ok) {
-        setErrorMessage(data.error || 'Unable to find enrollment for this mobile number.');
+        setErrorMessage(data.error || 'Failed to dispatch verification code. Please try again.');
         return;
       }
 
-      setMaskedMobile(data.maskedMobile || `+91 ${clean.slice(0, 2)}•••••${clean.slice(-3)}`);
-      setActiveToken(data.token || token);
+      setMaskedMobile(data.maskedMobile || resolved.student?.maskedPhone || `+91 ${clean.slice(0, 2)}•••••${clean.slice(-3)}`);
       setResendCountdown(data.cooldownSeconds || 30);
+      if (data.devOtp) {
+        setDevOtp(data.devOtp);
+      }
       setStage('OTP');
       // Pre-focus first box
       setTimeout(() => {
         otpInputsRef.current[0]?.focus();
       }, 100);
-    } catch {
-      setErrorMessage('Network error. Please check your connection and retry.');
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Network error. Please check your connection and retry.');
     } finally {
       setIsLoading(false);
     }
@@ -130,9 +151,9 @@ export const AuthPage: React.FC<AuthPageProps> = ({ state, token, onSuccess }) =
     }
   };
 
-  const handleVerifyOtp = async (e?: React.FormEvent) => {
+  const handleVerifyOtp = async (e?: React.FormEvent, overrideOtp?: string) => {
     if (e) e.preventDefault();
-    const enteredOtp = otp.join('');
+    const enteredOtp = overrideOtp || otp.join('');
     if (enteredOtp.length !== 6) {
       setErrorMessage('Please enter the complete 6-digit verification code.');
       return;
@@ -178,6 +199,9 @@ export const AuthPage: React.FC<AuthPageProps> = ({ state, token, onSuccess }) =
         setErrorMessage(data.error || 'Failed to resend code');
         return;
       }
+      if (data.devOtp) {
+        setDevOtp(data.devOtp);
+      }
       setResendCountdown(30);
       setResendSuccess(true);
       setTimeout(() => setResendSuccess(false), 4000);
@@ -186,13 +210,6 @@ export const AuthPage: React.FC<AuthPageProps> = ({ state, token, onSuccess }) =
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleFillDemoOtp = () => {
-    const demo = ['1', '2', '3', '4', '5', '6'];
-    setOtp(demo);
-    setErrorMessage(null);
-    otpInputsRef.current[5]?.focus();
   };
 
   return (
@@ -281,12 +298,6 @@ export const AuthPage: React.FC<AuthPageProps> = ({ state, token, onSuccess }) =
                 )}
               </button>
             </form>
-
-            <div className="mt-6 pt-5 border-t border-slate-100 text-center">
-              <span className="text-xs text-slate-500">
-                Demo session active for Rahul Kumar (Test Mobile: <strong className="text-slate-700">9876543210</strong>)
-              </span>
-            </div>
           </div>
         ) : (
           /* ========================================================
@@ -300,6 +311,28 @@ export const AuthPage: React.FC<AuthPageProps> = ({ state, token, onSuccess }) =
               We sent a 6-digit verification code to:{' '}
               <strong className="text-slate-900 font-mono font-semibold">{maskedMobile}</strong>
             </p>
+
+            {devOtp && (
+              <div className="mb-5 p-3.5 rounded-xl bg-blue-50/80 border border-blue-200/90 text-xs text-blue-950 flex items-center justify-between shadow-xs">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>
+                    OTP Code: <strong className="font-mono text-sm tracking-widest text-blue-700">{devOtp}</strong>
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const digits = devOtp.split('');
+                    setOtp(digits);
+                    handleVerifyOtp(undefined, digits.join(''));
+                  }}
+                  className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition cursor-pointer shadow-xs"
+                >
+                  Auto-fill
+                </button>
+              </div>
+            )}
 
             <form onSubmit={handleVerifyOtp} className="space-y-6">
               {/* 6-box OTP input */}
@@ -321,18 +354,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ state, token, onSuccess }) =
                 ))}
               </div>
 
-              {/* Demo test code autofill button */}
-              <div className="flex items-center justify-between text-xs">
-                <button
-                  type="button"
-                  onClick={handleFillDemoOtp}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 text-[#0B63E5] font-semibold hover:bg-blue-100 transition-colors border border-blue-200 cursor-pointer"
-                  title="Auto-fill 123456 test code"
-                >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>Use Test Code (123456)</span>
-                </button>
-
+              <div className="flex items-center justify-end text-xs">
                 <button
                   type="button"
                   onClick={() => {

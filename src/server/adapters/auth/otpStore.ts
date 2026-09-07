@@ -22,10 +22,6 @@ export class OtpStore {
   private readonly resendCooldownMs = 30 * 1000; // 30 seconds
   private readonly maxAttemptsAllowed = 5;
 
-  private isDemoAllowed(): boolean {
-    return process.env.ALLOW_DEMO_OTP !== 'false';
-  }
-
   public createOrResendOtp(token: string, mobile: string): { code: string; cooldownSeconds: number } {
     const cleanMobile = mobile.replace(/\D/g, '');
     const now = Date.now();
@@ -66,19 +62,7 @@ export class OtpStore {
     const session = this.sessions.get(token);
     const cleanCode = (inputOtp || '').trim();
 
-    // Check demo code bypass if allowed
-    if (this.isDemoAllowed() && cleanCode === '123456') {
-      if (session) {
-        session.verified = true;
-      }
-      return { success: true };
-    }
-
     if (!session) {
-      // If no active session, allow 123456 in demo mode
-      if (this.isDemoAllowed() && cleanCode === '123456') {
-        return { success: true };
-      }
       return {
         success: false,
         error: 'No active OTP session found. Please request a new code.',

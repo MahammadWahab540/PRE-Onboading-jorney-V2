@@ -153,4 +153,66 @@ console.log('--- RUNNING ORCHESTRATOR & FIXTURE RESOLUTION TESTS ---');
   console.log('✓ 14. Fibe lender mapping test passed');
 }
 
-console.log('ALL 14 SUITES PASSED CLEANLY! ✨');
+// 15. Persisted Stage_PRE__c resume test
+{
+  const rec = {
+    ...MOCK_SALESFORCE_FIXTURES.nw_auth_success_fresh,
+    Stage_PRE__c: 'kyc',
+  };
+  const journey = mapSalesforceToJourney(rec, 'nw_auth_success_fresh');
+  assert.strictEqual(journey.authenticated, true);
+  assert.strictEqual(journey.journey.recommendedRoute, 'kyc');
+  console.log('✓ 15. Persisted Stage_PRE__c resume test passed');
+}
+
+// 16. Onboarding_Status__c picklist mapping test
+{
+  const kycSubRec = {
+    ...MOCK_SALESFORCE_FIXTURES.nw_auth_success_fresh,
+    Payment_Plan_PRE__c: 'No-Cost EMI',
+    Co_Applicant_Name__c: 'Father Test',
+    Co_Applicant_Phone_Number_PRE__c: '9876543210',
+    Onboarding_Status__c: 'KYC Submitted',
+  };
+  const jKyc = mapSalesforceToJourney(kycSubRec, 'test_kyc_sub');
+  assert.strictEqual(jKyc.kyc?.status, 'SUBMITTED');
+
+  const nbfcRec = {
+    ...MOCK_SALESFORCE_FIXTURES.nw_auth_success_fresh,
+    Payment_Plan_PRE__c: 'No-Cost EMI',
+    Co_Applicant_Name__c: 'Father Test',
+    Co_Applicant_Phone_Number_PRE__c: '9876543210',
+    Onboarding_Status__c: 'Application in NBFC',
+  };
+  const jNbfc = mapSalesforceToJourney(nbfcRec, 'test_nbfc');
+  assert.strictEqual(jNbfc.kyc?.status, 'VERIFIED');
+
+  console.log('✓ 16. Onboarding_Status__c stage mapping test passed');
+}
+
+// 17. Specific lead a03fv0000014m0zAAA test (Stale Stage_PRE__c = "congratulations" + Onboarding_Status__c = "KYC Submitted")
+{
+  const rec = {
+    Id: 'a03fv0000014m0zAAA',
+    Name: 'Test12345',
+    Onboarding_Status__c: 'KYC Submitted',
+    Stage_PRE__c: 'congratulations',
+    Payment_Plan_PRE__c: 'No-Cost EMI',
+    Co_Applicant_Name__c: 'Test CoApplicant',
+    Co_Applicant_Phone_Number_PRE__c: '9100886544',
+    Authentication_Verified__c: true,
+  };
+  const journey = mapSalesforceToJourney(rec as any, 'a03fv0000014m0zAAA');
+  assert.strictEqual(journey.journey.recommendedRoute, 'kyc');
+  assert.strictEqual(journey.journey.resolvedStep, 'kyc');
+  assert.strictEqual(journey.journey.stepIndex, 5);
+  assert.deepStrictEqual(journey.journey.completedSteps, [
+    'identity',
+    'program',
+    'payment',
+    'co-applicant',
+  ]);
+  console.log('✓ 17. Lead a03fv0000014m0zAAA sync to /kyc passed');
+}
+
+console.log('ALL 17 SUITES PASSED CLEANLY! ✨');

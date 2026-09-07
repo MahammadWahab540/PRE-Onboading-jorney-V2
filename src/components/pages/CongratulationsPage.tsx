@@ -19,13 +19,13 @@ export const CongratulationsPage: React.FC<CongratulationsPageProps> = ({
       ? rawLearnerName
       : typeof rawLearnerName === 'object' && rawLearnerName && (rawLearnerName as any).name
       ? String((rawLearnerName as any).name)
-      : 'Rahul';
+      : 'Learner';
   const firstName =
     typeof learnerName === 'string' && typeof learnerName.split === 'function'
-      ? learnerName.split(' ')[0] || 'Rahul'
-      : 'Rahul';
+      ? learnerName.split(' ')[0] || 'Learner'
+      : 'Learner';
   const programName =
-    typeof state.program?.name === 'string' ? state.program.name : 'Genius';
+    typeof state.program?.name === 'string' ? state.program.name : 'NxtWave Program';
 
   // Subtle confetti particles state
   const [particles, setParticles] = useState<

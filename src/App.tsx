@@ -21,21 +21,22 @@ import { NbfcStatusPage } from './components/pages/NbfcStatusPage';
 import { ClassAccessPage } from './components/pages/ClassAccessPage';
 import { SupportModal } from './components/SupportModal';
 import { VoiceAgent } from './components/VoiceAgent';
+import { AdminPortal } from './components/admin/AdminPortal';
 
-const DEFAULT_TOKEN = 'nw_rahul_genius_2026';
+const DEFAULT_TOKEN = '';
 
 const initialEnrollmentState: EnrollmentState = {
   journeyId: '',
-  token: DEFAULT_TOKEN,
+  token: '',
   learner: {
-    name: 'Rahul Kumar',
-    mobileMasked: '98•••••210',
-    emailMasked: 'ra•••••r@gmail.com',
+    name: '',
+    mobileMasked: '',
+    emailMasked: '',
   },
   program: {
-    name: 'NxtWave Genius',
-    price: 112000,
-    amountPayable: 112000,
+    name: 'NxtWave Program',
+    price: 0,
+    amountPayable: 0,
   },
   payment: {
     selectedMethod: null,
@@ -44,7 +45,7 @@ const initialEnrollmentState: EnrollmentState = {
   },
   emi: {
     selected: false,
-    amount: 112000,
+    amount: 0,
     tenure: '6 Months',
   },
   coApplicant: {
@@ -58,11 +59,11 @@ const initialEnrollmentState: EnrollmentState = {
     appointment: null,
   },
   financing: {
-    applicationId: 'APP-NA-2026-902',
-    lenderName: 'Northern Arc',
-    status: 'UNDER_REVIEW',
-    appliedAmount: 112000,
-    approvedAmount: 112000,
+    applicationId: '',
+    lenderName: '',
+    status: 'NOT_STARTED',
+    appliedAmount: 0,
+    approvedAmount: 0,
   },
   isAuthenticated: false,
 };
@@ -104,6 +105,18 @@ function normalizeRoute(routeStr?: string): PortalRoute {
 }
 
 export default function App() {
+  const [isAdminRoute, setIsAdminRoute] = useState(() =>
+    window.location.pathname.startsWith('/admin')
+  );
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setIsAdminRoute(window.location.pathname.startsWith('/admin'));
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
   const prefersReducedMotion = useReducedMotion();
   const [state, setState] = useState<EnrollmentState>(initialEnrollmentState);
   const [currentRoute, setCurrentRoute] = useState<PortalRoute>('auth');
@@ -111,12 +124,16 @@ export default function App() {
   const [isInitializing, setIsInitializing] = useState(true);
   const [isSupportOpen, setIsSupportOpen] = useState(false);
 
+  if (isAdminRoute) {
+    return <AdminPortal />;
+  }
+
   // Parse path & token from current URL
   const parsePath = useCallback(() => {
     const pathname = window.location.pathname;
     const parts = pathname.split('/').filter(Boolean);
 
-    let extractedToken = DEFAULT_TOKEN;
+    let extractedToken = '';
     let extractedRoute: PortalRoute | null = null;
 
     if (parts[0] === 'enrollment' && parts[1]) {
@@ -129,17 +146,32 @@ export default function App() {
     return { token: extractedToken, route: extractedRoute };
   }, []);
 
-  // Update browser URL without refreshing
+  // Update browser URL without refreshing and sync stage to Salesforce
   const navigateTo = useCallback(
     (newRoute: PortalRoute) => {
       setCurrentRoute(newRoute);
-      const newPath = `/enrollment/${token}/${newRoute}`;
-      if (window.location.pathname !== newPath) {
-        window.history.pushState(null, '', newPath);
+      const currentToken = token || parsePath().token;
+      if (currentToken) {
+        try {
+          localStorage.setItem(`nw_pre_route_${currentToken}`, newRoute);
+        } catch {}
+
+        if (newRoute !== 'auth') {
+          fetch(`/api/enrollment/${currentToken}/stage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ stage: newRoute }),
+          }).catch((err) => console.warn('Stage sync error:', err));
+        }
+
+        const newPath = `/enrollment/${currentToken}/${newRoute}`;
+        if (window.location.pathname !== newPath) {
+          window.history.pushState(null, '', newPath);
+        }
       }
       window.scrollTo({ top: 0, behavior: 'smooth' });
     },
-    [token]
+    [token, parsePath]
   );
 
   // Helper to merge canonical journey into enrollment state
@@ -159,6 +191,7 @@ export default function App() {
         name: journey.learner?.name ?? prev.learner?.name ?? 'Learner',
         mobileMasked: journey.learner?.mobileMasked ?? prev.learner?.mobileMasked ?? '',
         emailMasked: journey.learner?.emailMasked ?? prev.learner?.emailMasked ?? '',
+        preferredLanguage: journey.learner?.preferredLanguage ?? prev.learner?.preferredLanguage ?? 'English',
       },
       program: {
         ...prev.program,
@@ -203,8 +236,20 @@ export default function App() {
     setToken(parsedToken);
 
     const bootstrap = async () => {
+      if (!parsedToken) {
+        setIsInitializing(false);
+        setCurrentRoute('auth');
+        return;
+      }
+
       try {
         const res = await fetch(`/api/enrollment/${parsedToken}/journey`);
+        if (!res.ok) {
+          // Token does not exist or expired
+          setCurrentRoute('auth');
+          return;
+        }
+
         const data = await res.json();
 
         if (data && (data.journey || data.learner)) {
@@ -220,30 +265,47 @@ export default function App() {
               window.history.replaceState(null, '', `/enrollment/${parsedToken}/auth`);
             }
           } else {
-            // If user explicitly navigated to a specific valid route, respect it; otherwise use server recommended
-            const targetRoute = parsedRoute && parsedRoute !== 'auth' ? parsedRoute : serverRoute;
+            const routeToStepIndex: Record<string, number> = {
+              auth: 1,
+              program: 2,
+              congratulations: 2,
+              pay: 3,
+              payment: 3,
+              emi: 3,
+              'co-applicant': 4,
+              kyc: 5,
+              'nbfc-status': 6,
+              'nbfc-review': 6,
+              'class-access': 7,
+              'payment-success': 7,
+            };
+
+            const serverIndex = routeToStepIndex[serverRoute] || 1;
+            const requestedIndex = parsedRoute ? (routeToStepIndex[parsedRoute] || 1) : 1;
+
+            let targetRoute = serverRoute;
+
+            // Route Guard: Prevent regressing to earlier completed steps via URL
+            if (parsedRoute && parsedRoute !== 'auth' && requestedIndex >= serverIndex) {
+              targetRoute = parsedRoute;
+            } else {
+              if (parsedRoute && requestedIndex < serverIndex) {
+                console.log(
+                  `[EnrollmentSync] 🛡️ Route Guard auto-redirect: URL route '${parsedRoute}' (step #${requestedIndex}) regressed behind Salesforce stage route '${serverRoute}' (step #${serverIndex}). Redirecting to '${serverRoute}'.`
+                );
+              }
+              targetRoute = serverRoute;
+            }
+
             setCurrentRoute(targetRoute);
             if (window.location.pathname !== `/enrollment/${parsedToken}/${targetRoute}`) {
               window.history.replaceState(null, '', `/enrollment/${parsedToken}/${targetRoute}`);
             }
           }
-        } else {
-          // Fallback to legacy endpoint if journey endpoint returned error
-          const fallbackRes = await fetch(`/api/enrollment/${parsedToken}`);
-          const fallbackData = await fallbackRes.json();
-          if (fallbackData.valid) {
-            const isAuthed = Boolean(fallbackData.authentication?.verified);
-            setState((prev) => ({
-              ...prev,
-              isAuthenticated: isAuthed,
-              learner: { ...prev.learner, ...(fallbackData.learner || {}) },
-              program: { ...prev.program, ...(fallbackData.program || {}) },
-            }));
-            setCurrentRoute(isAuthed ? 'program' : 'auth');
-          }
         }
       } catch (err) {
         console.error('Failed to bootstrap enrollment journey:', err);
+        setCurrentRoute('auth');
       } finally {
         setIsInitializing(false);
       }
@@ -267,13 +329,38 @@ export default function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, [parsePath, state.isAuthenticated]);
 
-  // -------------------------------------------------------------------
+  // -------------------------------------------------------------
   // Route Navigation & State Handlers
-  // -------------------------------------------------------------------
+  // -------------------------------------------------------------
   const handleAuthSuccess = (payload: any) => {
+    let nextRoute: PortalRoute = 'program';
+    let resolvedToken = token;
+
     if (payload && typeof payload === 'object') {
       applyCanonicalJourney(payload);
       setState((prev) => ({ ...prev, isAuthenticated: true }));
+
+      resolvedToken =
+        payload.journeyId ||
+        payload.token ||
+        payload.journey?.journeyId ||
+        payload.journey?.token ||
+        token ||
+        parsePath().token;
+
+      if (resolvedToken && resolvedToken !== token) {
+        setToken(resolvedToken);
+      }
+
+      const recommended =
+        payload.journey?.journey?.recommendedRoute ||
+        payload.journey?.recommendedRoute ||
+        payload.recommendedRoute ||
+        payload.targetRoute;
+
+      if (recommended && recommended !== 'auth') {
+        nextRoute = normalizeRoute(recommended);
+      }
     } else {
       const name = typeof payload === 'string' ? payload : 'Learner';
       setState((prev) => ({
@@ -285,7 +372,25 @@ export default function App() {
         },
       }));
     }
-    navigateTo('congratulations');
+
+    const currentToken = resolvedToken || token || parsePath().token;
+    if (currentToken) {
+      // Overwrite stale localStorage with the fresh authoritative Salesforce route
+      try {
+        localStorage.setItem(`nw_pre_route_${currentToken}`, nextRoute);
+      } catch {}
+
+      // Update state and URL
+      setCurrentRoute(nextRoute);
+      const newPath = `/enrollment/${currentToken}/${nextRoute}`;
+      if (window.location.pathname !== newPath) {
+        window.history.pushState(null, '', newPath);
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    navigateTo(nextRoute);
   };
 
   const handleSelectPaymentMethod = (method: PaymentMethodType) => {
@@ -363,10 +468,10 @@ export default function App() {
           <div className="w-6 h-6 rounded-full border-3 border-[#0B63E5] border-t-transparent animate-spin" />
         </div>
         <p className="text-sm font-semibold text-[#0A192F]">
-          Loading enrollment journey...
+          Loading enrollment status...
         </p>
         <span className="text-xs text-slate-400 mt-1">
-          Securing encrypted connection
+          Fetching active Salesforce journey status
         </span>
       </div>
     );
@@ -402,6 +507,7 @@ export default function App() {
                 state={state}
                 token={token}
                 onSuccess={handleAuthSuccess}
+                onTokenResolved={(resolvedToken) => setToken(resolvedToken)}
               />
             </motion.div>
           )}
@@ -603,6 +709,13 @@ export default function App() {
             >
               Support Helpline
             </button>
+            <span>•</span>
+            <a
+              href="/admin"
+              className="hover:text-[#0B63E5] underline hover:no-underline cursor-pointer font-medium"
+            >
+              Admin Portal
+            </a>
           </div>
         </div>
       </footer>

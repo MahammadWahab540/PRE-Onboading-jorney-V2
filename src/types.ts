@@ -22,6 +22,7 @@ export interface LearnerInfo {
   name?: string;
   mobileMasked: string;
   emailMasked?: string;
+  preferredLanguage?: string;
 }
 
 export interface ProgramInfo {

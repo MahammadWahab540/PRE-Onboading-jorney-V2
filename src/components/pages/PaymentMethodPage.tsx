@@ -67,7 +67,7 @@ export const PaymentMethodPage: React.FC<PaymentMethodPageProps> = ({
       await fetch(`/api/enrollment/${token}/payment-method`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ paymentMethod: selected }),
+        body: JSON.stringify({ method: selected, paymentMethod: selected }),
       });
       onSelectMethod(selected);
     } catch {

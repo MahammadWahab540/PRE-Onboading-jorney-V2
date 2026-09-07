@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
@@ -13,6 +14,11 @@ import {
 } from './src/server/adapters/salesforce/enrollmentMapper';
 import { otpStore } from './src/server/adapters/auth/otpStore';
 import { paymentProvider } from './src/server/adapters/payment/paymentProvider';
+import { gallaboxClient } from './src/server/adapters/whatsapp/gallaboxClient';
+import { getLocalizedStepScript, LANGUAGE_CODES } from './src/server/adapters/voice/voiceScripts';
+import { normalizeIndianPhone } from './src/server/domain/phoneNormalizer';
+import { deriveJourneyStageAndRoute } from './src/server/domain/journeyEngine';
+import { normalizeNbfcStatus, resolveActiveLenderName } from './src/server/domain/nbfcStatusEngine';
 import type { PaymentMethod } from './src/types/journey';
 
 const app = express();
@@ -55,6 +61,248 @@ app.get('/api/enrollment/:token/journey', async (req, res) => {
 });
 
 // -------------------------------------------------------------
+// ADMIN PORTAL APIS (Search by UIDs, Phone, Name, Order ID)
+// -------------------------------------------------------------
+function sanitizeAdminRecord(r: any) {
+  if (!r) return r;
+  const sanitized = { ...r };
+  if (sanitized.Student_Number__c) sanitized.Student_Number__c = maskPhone(sanitized.Student_Number__c);
+  if (sanitized.Student_WhatsApp_Number__c) sanitized.Student_WhatsApp_Number__c = maskPhone(sanitized.Student_WhatsApp_Number__c);
+  if (sanitized.PHONE_NUMBER__c) sanitized.PHONE_NUMBER__c = maskPhone(sanitized.PHONE_NUMBER__c);
+  if (sanitized.Parent_Guardian_Phone_Number_PRE__c) sanitized.Parent_Guardian_Phone_Number_PRE__c = maskPhone(sanitized.Parent_Guardian_Phone_Number_PRE__c);
+  if (sanitized.Parent_Phone_Number__c) sanitized.Parent_Phone_Number__c = maskPhone(sanitized.Parent_Phone_Number__c);
+  if (sanitized.Email_PRE__c) sanitized.Email_PRE__c = maskEmail(sanitized.Email_PRE__c);
+  if (sanitized.Parent_Email__c) sanitized.Parent_Email__c = maskEmail(sanitized.Parent_Email__c);
+  if (sanitized.Co_Applicant_Phone_Number_PRE__c) sanitized.Co_Applicant_Phone_Number_PRE__c = maskPhone(sanitized.Co_Applicant_Phone_Number_PRE__c);
+  if (sanitized.Co_Applicant_Mail_ID_PRE__c) sanitized.Co_Applicant_Mail_ID_PRE__c = maskEmail(sanitized.Co_Applicant_Mail_ID_PRE__c);
+  if (sanitized.Co_Applicant_Address_PRE__c) sanitized.Co_Applicant_Address_PRE__c = '•••••• (Protected)';
+  if (sanitized.Date_of_Birth__c) sanitized.Date_of_Birth__c = '••••-••-••';
+  return sanitized;
+}
+
+app.get('/api/admin/recent', async (req, res) => {
+  try {
+    const limit = parseInt((req.query.limit as string) || '25', 10);
+    const records = await salesforceClient.getRecentRecords(limit);
+    const mapped = records.map((r) => ({
+      record: sanitizeAdminRecord(r),
+      journey: mapSalesforceToJourney(r, r.Token__c || r.userId__c || r.Id),
+      portalUrl: `/enrollment/${r.Token__c || r.userId__c || r.Id}`,
+    }));
+    return res.json({ success: true, total: mapped.length, data: mapped });
+  } catch (err: any) {
+    console.error('Error fetching recent admin records:', err);
+    return res.status(500).json({ error: 'Failed to load recent records' });
+  }
+});
+
+app.get('/api/admin/search', async (req, res) => {
+  const query = (req.query.q as string || '').trim();
+  try {
+    const records = await salesforceClient.searchRecords(query, 30);
+    const mapped = records.map((r) => ({
+      record: sanitizeAdminRecord(r),
+      journey: mapSalesforceToJourney(r, r.Token__c || r.userId__c || r.Id),
+      portalUrl: `/enrollment/${r.Token__c || r.userId__c || r.Id}`,
+    }));
+    return res.json({ success: true, query, total: mapped.length, data: mapped });
+  } catch (err: any) {
+    console.error('Error searching admin records:', err);
+    return res.status(500).json({ error: 'Failed to execute search' });
+  }
+});
+
+app.get('/api/admin/record/:identifier', async (req, res) => {
+  const { identifier } = req.params;
+  try {
+    const record = await salesforceClient.getRecordByToken(identifier);
+    if (!record) {
+      return res.status(404).json({ error: 'Record not found for given identifier' });
+    }
+    const journey = mapSalesforceToJourney(record, identifier);
+    return res.json({
+      success: true,
+      record: sanitizeAdminRecord(record),
+      journey,
+      portalUrl: `/enrollment/${record.Token__c || record.userId__c || record.Id}`,
+    });
+  } catch (err: any) {
+    console.error('Error fetching record details:', err);
+    return res.status(500).json({ error: 'Failed to load record details' });
+  }
+});
+
+app.post('/api/admin/send-whatsapp-otp', async (req, res) => {
+  const { identifier, phone, name } = req.body || {};
+  let targetPhone = phone;
+  let targetName = name;
+  let token = identifier;
+
+  if (identifier) {
+    const record = await salesforceClient.getRecordByToken(identifier);
+    if (record) {
+      targetPhone =
+        record.Student_Number__c ||
+        record.Student_WhatsApp_Number__c ||
+        record.PHONE_NUMBER__c ||
+        record.Parent_Guardian_Phone_Number_PRE__c;
+      targetName = record.Student_Name__c || record.Name;
+      token = record.Token__c || record.userId__c || record.Id;
+    }
+  }
+
+  if (!targetPhone) {
+    return res.status(400).json({ error: 'No phone number found for this record' });
+  }
+
+  const cleanPhone = String(targetPhone).replace(/\D/g, '');
+  if (cleanPhone.length < 10) {
+    return res.status(400).json({ error: 'Valid mobile number required' });
+  }
+
+  const sessionToken = token || `admin_gen_${Date.now()}`;
+  const { code } = otpStore.createOrResendOtp(sessionToken, cleanPhone);
+
+  const result = await gallaboxClient.sendOtp(cleanPhone, code, targetName || 'Learner');
+  return res.json({
+    success: result.success,
+    maskedPhone: maskPhone(cleanPhone),
+    otp: code,
+    whatsappSent: result.success,
+    error: result.error,
+  });
+});
+
+// -------------------------------------------------------------
+// V3 CENTRAL ONBOARDING RESOLVER API
+// -------------------------------------------------------------
+app.post('/api/onboarding/resolve', async (req, res) => {
+  const { phone } = req.body || {};
+  console.log('[ONBOARDING] phone entered:', phone);
+
+  if (!phone || typeof phone !== 'string') {
+    return res.status(400).json({
+      success: false,
+      code: 'INVALID_PHONE_NUMBER',
+      message: 'Mobile number is required',
+    });
+  }
+
+  const normalized = normalizeIndianPhone(phone);
+  console.log('[ONBOARDING] normalized phone:', normalized);
+
+  if (!normalized) {
+    return res.status(400).json({
+      success: false,
+      code: 'INVALID_PHONE_NUMBER',
+      message: 'Please enter a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9',
+    });
+  }
+
+  try {
+    console.log('[ONBOARDING] SF lookup started for:', normalized);
+    const result = await salesforceClient.findActiveRecordByPhone(normalized);
+    console.log(`[ONBOARDING] SF lookup complete. Candidates: ${result.candidateCount}, Eligible: ${result.eligibleCount}`);
+
+    if (!result.selected) {
+      return res.status(404).json({
+        success: false,
+        code: 'SF_RECORD_NOT_FOUND',
+        message: 'No active onboarding record found for this mobile number. Please contact your admissions counselor.',
+        candidateCount: result.candidateCount,
+      });
+    }
+
+    const activeRecord = result.selected;
+    console.log(`[ONBOARDING] Selected active record: ${activeRecord.Id} (${activeRecord.Name}), Status: ${activeRecord.Onboarding_Status__c}, Stage: ${activeRecord.Stage_PRE__c}`);
+
+    const journeyResult = deriveJourneyStageAndRoute(activeRecord);
+    console.log(`[ONBOARDING] Derived journey stage: ${journeyResult.stage}, target route: ${journeyResult.route}`);
+
+    const studentPhone = normalized;
+    const studentName = activeRecord.Student_Name__c || activeRecord.Name || 'Learner';
+    const recordToken = activeRecord.Id;
+
+    return res.json({
+      success: true,
+      student: {
+        phone: studentPhone,
+        name: studentName,
+        maskedPhone: maskPhone(studentPhone),
+      },
+      salesforce: {
+        recordId: activeRecord.Id,
+        object: 'Academy_Onboarding_PRE__c',
+        status: activeRecord.Onboarding_Status__c || 'Yet To Contact',
+        stagePre: activeRecord.Stage_PRE__c || null,
+        lastModifiedDate: (activeRecord as any).LastModifiedDate || null,
+        createdDate: (activeRecord as any).CreatedDate || null,
+        candidateCount: result.candidateCount,
+        isAmbiguous: result.isAmbiguous,
+      },
+      journey: {
+        stage: journeyResult.stage,
+        route: `/enrollment/${recordToken}/${journeyResult.route}`,
+        targetRoute: journeyResult.route,
+        token: recordToken,
+        authRequired: journeyResult.authRequired,
+      },
+      resolvedAt: new Date().toISOString(),
+    });
+  } catch (err: any) {
+    console.error('[ONBOARDING] Exception during resolve:', err.message);
+    return res.status(500).json({
+      success: false,
+      code: 'SF_SERVICE_UNAVAILABLE',
+      message: 'Failed to communicate with Salesforce. Please try again shortly.',
+      error: err.message,
+    });
+  }
+});
+
+// Debug endpoint for development & verification (no secrets/tokens leaked)
+app.get('/api/debug/onboarding/:phone', async (req, res) => {
+  const { phone } = req.params;
+  const normalized = normalizeIndianPhone(phone);
+  if (!normalized) {
+    return res.status(400).json({ error: 'Invalid phone format' });
+  }
+
+  try {
+    const result = await salesforceClient.findActiveRecordByPhone(normalized);
+    if (!result.selected) {
+      return res.status(404).json({
+        inputPhone: phone,
+        normalizedPhone: normalized,
+        matchingRecords: result.candidateCount,
+        selectedRecord: null,
+      });
+    }
+
+    const journeyResult = deriveJourneyStageAndRoute(result.selected);
+    return res.json({
+      inputPhone: phone,
+      normalizedPhone: normalized,
+      matchingRecords: result.candidateCount,
+      eligibleRecords: result.eligibleCount,
+      selectedRecord: {
+        id: result.selected.Id,
+        name: result.selected.Name,
+        status: result.selected.Onboarding_Status__c,
+        stagePre: result.selected.Stage_PRE__c,
+        lastModifiedDate: (result.selected as any).LastModifiedDate,
+        createdDate: (result.selected as any).CreatedDate,
+      },
+      journeyStage: journeyResult.stage,
+      route: `/enrollment/${result.selected.Id}/${journeyResult.route}`,
+      targetRoute: journeyResult.route,
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// -------------------------------------------------------------
 // V3 TWO-STAGE AUTHENTICATION API
 // -------------------------------------------------------------
 app.post('/api/auth/send-otp', async (req, res) => {
@@ -64,31 +312,61 @@ app.post('/api/auth/send-otp', async (req, res) => {
     return res.status(400).json({ error: 'Please enter a mobile number' });
   }
 
-  const cleanPhone = mobile.replace(/\D/g, '');
-  if (cleanPhone.length !== 10 || !/^[6-9]\d{9}$/.test(cleanPhone)) {
+  const cleanPhone = normalizeIndianPhone(mobile);
+  if (!cleanPhone) {
     return res.status(400).json({
       error: 'Please enter a valid 10-digit Indian mobile number starting with 6-9',
     });
   }
 
   try {
-    // 1. Locate learner in Salesforce
+    // 1. Locate learner in Database - always prefer authoritative active record
     const foundRecord = await salesforceClient.findRecordByMobile(cleanPhone);
-    const sessionToken = token || foundRecord?.Token__c || 'nw_rahul_genius_2026';
+    const sessionToken = foundRecord?.Id || token || foundRecord?.Token__c || foundRecord?.userId__c;
+
+    if (!sessionToken) {
+      return res.status(404).json({
+        error: 'No active enrollment found for this mobile number. Please contact your admissions counselor.',
+      });
+    }
 
     // 2. Generate / Resend OTP via dedicated OTP store
-    const { cooldownSeconds } = otpStore.createOrResendOtp(sessionToken, cleanPhone);
+    const { cooldownSeconds, code } = otpStore.createOrResendOtp(sessionToken, cleanPhone);
+
+    // 3. Dispatch WhatsApp OTP via Gallabox
+    const studentName = foundRecord?.Student_Name__c || foundRecord?.Name || 'Learner';
+    const whatsappResult = await gallaboxClient.sendOtp(
+      cleanPhone,
+      code,
+      studentName
+    );
 
     return res.json({
       success: true,
       token: sessionToken,
       maskedMobile: maskPhone(cleanPhone),
       cooldownSeconds,
-      demoAllowed: process.env.ALLOW_DEMO_OTP !== 'false',
+      demoAllowed: false,
+      whatsappSent: whatsappResult.success,
+      whatsappMessageId: whatsappResult.messageId,
+      devOtp: process.env.NODE_ENV !== 'production' ? code : undefined,
     });
   } catch (err: any) {
     return res.status(429).json({ error: err.message || 'Failed to send OTP' });
   }
+});
+
+// Test endpoint for Gallabox WhatsApp OTP delivery
+app.post('/api/test/whatsapp-otp', async (req, res) => {
+  const { phone, code, name } = req.body || {};
+  const targetPhone = phone || '9100886544';
+  const testCode = code || Math.floor(100000 + Math.random() * 900000).toString();
+  const result = await gallaboxClient.sendOtp(targetPhone, testCode, name || 'Learner');
+  return res.json({
+    targetPhone,
+    code: testCode,
+    result,
+  });
 });
 
 app.post('/api/auth/verify-otp', async (req, res) => {
@@ -108,10 +386,13 @@ app.post('/api/auth/verify-otp', async (req, res) => {
   }
 
   try {
-    // Update Salesforce record authentication state
+    // Update record authentication state
     const updatedRecord = await salesforceClient.updateRecord(token, {
       Authentication_Verified__c: true,
     });
+    if (!updatedRecord) {
+      return res.status(404).json({ error: 'Enrollment session not found' });
+    }
     const journey = mapSalesforceToJourney(updatedRecord, token);
 
     return res.json({
@@ -125,11 +406,37 @@ app.post('/api/auth/verify-otp', async (req, res) => {
 });
 
 // -------------------------------------------------------------
+// JOURNEY STAGE PERSISTENCE API
+// -------------------------------------------------------------
+app.post('/api/enrollment/:token/stage', async (req, res) => {
+  const { token } = req.params;
+  const { stage } = req.body;
+
+  if (!stage || typeof stage !== 'string') {
+    return res.status(400).json({ error: 'Stage is required' });
+  }
+
+  try {
+    const updated = await salesforceClient.updateRecord(token, {
+      Stage_PRE__c: stage,
+    });
+    if (!updated) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+    const journey = mapSalesforceToJourney(updated, token);
+    return res.json({ success: true, stage, journey });
+  } catch (err: any) {
+    console.error('Failed to update stage in Salesforce:', err);
+    return res.status(500).json({ error: 'Failed to update stage' });
+  }
+});
+
+// -------------------------------------------------------------
 // PAYMENT SELECTION & DIRECT CHECKOUT APIS
 // -------------------------------------------------------------
 app.post('/api/enrollment/:token/payment-method', async (req, res) => {
   const { token } = req.params;
-  const { method } = req.body;
+  const method = req.body.method || req.body.paymentMethod;
 
   const validMethods: PaymentMethod[] = ['FULL_PAYMENT', 'CREDIT_CARD', 'NO_COST_EMI'];
   if (!validMethods.includes(method)) {
@@ -138,11 +445,19 @@ app.post('/api/enrollment/:token/payment-method', async (req, res) => {
 
   try {
     let planString = 'Full Payment';
-    if (method === 'CREDIT_CARD') planString = 'Credit Card';
-    if (method === 'NO_COST_EMI') planString = 'No-Cost EMI';
+    let nextStage = 'pay';
+    if (method === 'CREDIT_CARD') {
+      planString = 'Credit Card';
+      nextStage = 'pay';
+    }
+    if (method === 'NO_COST_EMI') {
+      planString = 'No-Cost EMI';
+      nextStage = 'emi';
+    }
 
     const updated = await salesforceClient.updateRecord(token, {
       Payment_Plan_PRE__c: planString,
+      Stage_PRE__c: nextStage,
     });
     const journey = mapSalesforceToJourney(updated, token);
 
@@ -183,6 +498,7 @@ app.post('/api/enrollment/:token/pay/simulate', async (req, res) => {
       Receipt_Id__c: receiptId,
       Payment_Date_Time__c: new Date().toISOString(),
       LMS_Access_Status__c: 'Active',
+      Stage_PRE__c: 'class-access',
     });
 
     const journey = mapSalesforceToJourney(updated, token);
@@ -234,6 +550,7 @@ app.post('/api/enrollment/:token/co-applicant', async (req, res) => {
       CIBIL_Score_Range_PRE__c: cibilScoreRange || '750+',
       Co_Applicant_State_PRE__c: state || 'Telangana',
       Co_Applicant_Address_PRE__c: address || '',
+      Stage_PRE__c: 'kyc',
     });
 
     const journey = mapSalesforceToJourney(updated, token);
@@ -257,17 +574,20 @@ app.post('/api/enrollment/:token/kyc/action', async (req, res) => {
         KYC_Submission_Status__c: 'SUBMITTED',
         KYC_Submission_Date_and_Time__c: new Date().toISOString(),
         ADDITIONAL_DETAILS_REQUIRED_PRE_PRE__c: null,
+        Stage_PRE__c: 'kyc',
       };
     } else if (action === 'COMPLETE' || action === 'VERIFY') {
       updates = {
         KYC_Submission_Status__c: 'VERIFIED',
         KYC_Call_Status_PRE__c: 'COMPLETED',
+        Stage_PRE__c: 'nbfc-status',
       };
     } else if (action === 'RETRY_DOCUMENTS') {
       updates = {
         KYC_Submission_Status__c: 'SUBMITTED',
         KYC_Submission_Date_and_Time__c: new Date().toISOString(),
         ADDITIONAL_DETAILS_REQUIRED_PRE_PRE__c: null,
+        Stage_PRE__c: 'kyc',
       };
     }
 
@@ -287,11 +607,25 @@ app.get('/api/enrollment/:token/nbfc-status', async (req, res) => {
   try {
     const record = await salesforceClient.getRecordByToken(token);
     if (!record) return res.status(404).json({ error: 'Record not found' });
+
     const journey = mapSalesforceToJourney(record, token);
+    const normalized = normalizeNbfcStatus(record as any);
+
     return res.json({
       success: true,
       financing: journey.financing,
       journey: journey.journey,
+      // Normalized NBFC status for direct UI consumption
+      nbfc: {
+        statusCode: normalized.statusCode,
+        statusLabel: normalized.statusLabel,
+        activeLender: normalized.activeLender,
+        userMessage: normalized.userMessage,
+        callToAction: normalized.callToAction,
+        classAccessEta: normalized.classAccessEta,
+        lastUpdated: normalized.lastUpdated,
+        rawStatus: normalized.rawStatus,
+      },
     });
   } catch (err: any) {
     return res.status(500).json({ error: 'Failed to load NBFC status' });
@@ -311,6 +645,7 @@ app.post('/api/enrollment/:token/nbfc/action', async (req, res) => {
       updates = {
         Northern_Arc_Overall_Stages__c: 'EMI Setup Done',
         Fibe_Overall_Stages__c: 'APPROVED',
+        Stage_PRE__c: 'nbfc-status',
       };
     } else if (action === 'DISBURSE_SIMULATE') {
       updates = {
@@ -318,6 +653,7 @@ app.post('/api/enrollment/:token/nbfc/action', async (req, res) => {
         Disbursed_Amount_PRE__c: amount,
         Disbursed_Date_Time__c: new Date().toISOString(),
         LMS_Access_Status__c: 'Active',
+        Stage_PRE__c: 'class-access',
       };
     } else if (action === 'CHANGE_CO_APPLICANT') {
       updates = {
@@ -325,11 +661,13 @@ app.post('/api/enrollment/:token/nbfc/action', async (req, res) => {
         Co_Applicant_Phone_Number_PRE__c: null,
         Northern_Arc_Overall_Stages__c: 'Application Form Filled',
         KYC_Submission_Status__c: 'NOT_STARTED',
+        Stage_PRE__c: 'co-applicant',
       };
     } else if (action === 'RETRY_DOCUMENTS') {
       updates = {
         Northern_Arc_Overall_Stages__c: 'Review In Progress',
         Fibe_Overall_Stages__c: 'UNDERWRITING',
+        Stage_PRE__c: 'nbfc-status',
       };
     }
 
@@ -666,16 +1004,38 @@ const STEP_SCRIPTS: Record<
   },
 };
 
-app.get('/api/voice-guide/step-script/:step', (req, res) => {
+app.get('/api/voice-guide/step-script/:step', async (req, res) => {
   const { step } = req.params;
-  const script = STEP_SCRIPTS[step] || STEP_SCRIPTS.auth;
-  return res.json({ success: true, step, ...script });
+  let lang = (req.query.lang as string || '').trim();
+  const token = (req.query.token as string || '').trim();
+
+  // If language not explicitly passed in query, lookup learner's Salesforce Preferred_Languages__c
+  if (!lang && token) {
+    try {
+      const record = await salesforceClient.getRecordByToken(token);
+      if (record) {
+        lang = (record.Preferred_Languages__c || record.Latest_Preferred_Language__c || 'English')
+          .split(';')[0]
+          .trim();
+      }
+    } catch {}
+  }
+
+  const selectedLanguage = lang || 'English';
+  const script = getLocalizedStepScript(step, selectedLanguage);
+  return res.json({
+    success: true,
+    step,
+    language: selectedLanguage,
+    ...script,
+  });
 });
 
 app.post('/api/voice-guide/ask', async (req, res) => {
-  const { step, question, learnerName } = req.body;
+  const { step, question, learnerName, language } = req.body;
   const currentStep = step || 'auth';
-  const script = STEP_SCRIPTS[currentStep] || STEP_SCRIPTS.auth;
+  const targetLanguage = language || 'English';
+  const script = getLocalizedStepScript(currentStep, targetLanguage);
 
   if (!question || typeof question !== 'string' || !question.trim()) {
     return res.json({
@@ -683,17 +1043,20 @@ app.post('/api/voice-guide/ask', async (req, res) => {
       answer: script.speech,
       source: 'script',
       step: currentStep,
+      language: targetLanguage,
     });
   }
 
   if (process.env.GEMINI_API_KEY) {
     const prompt = `Learner name: ${learnerName || 'Learner'}
+Preferred Language: ${targetLanguage}
 Current Portal Step: ${currentStep} (${script.title})
 Context: ${script.speech}
 Key points for this step: ${script.keyPoints.join('; ')}
 User's Question: "${question}"
 
-Please provide a reassuring, concise (2 to 3 sentences max) answer directly addressing their question as the NxtWave Voice Guide.`;
+Please provide a reassuring, concise (2 to 3 sentences max) answer directly addressing their question as the NxtWave Voice Guide.
+IMPORTANT: You MUST generate your response in ${targetLanguage} so that it sounds natural when spoken aloud in ${targetLanguage}.`;
 
     const candidateModels = [
       'gemini-flash-latest',
@@ -709,7 +1072,7 @@ Please provide a reassuring, concise (2 to 3 sentences max) answer directly addr
           contents: prompt,
           config: {
             systemInstruction:
-              'You are Arya, the official voice guide for the NxtWave Learner Enrollment Portal. You speak warmly, clearly, and concisely to students and their parents. Answers must be 2-3 sentences max, suitable for natural audio text-to-speech. Never mention Salesforce internals or technical database fields. Help them feel confident and supported.',
+              `You are Arya, the official voice guide for the NxtWave Learner Enrollment Portal. You speak warmly, clearly, and concisely to students and their parents in ${targetLanguage}. Answers must be 2-3 sentences max, suitable for natural audio text-to-speech in ${targetLanguage}. Never mention Salesforce internals or database fields. Help them feel confident and supported.`,
             temperature: 0.7,
           },
         });
@@ -721,6 +1084,7 @@ Please provide a reassuring, concise (2 to 3 sentences max) answer directly addr
             answer: text,
             source: modelName,
             step: currentStep,
+            language: targetLanguage,
           });
         }
       } catch (err: any) {
@@ -729,32 +1093,55 @@ Please provide a reassuring, concise (2 to 3 sentences max) answer directly addr
     }
   }
 
-  // Fallback intelligent answers
-  const qLower = question.toLowerCase();
-  let fallbackAnswer = script.speech;
-
-  if (qLower.includes('emi') || qLower.includes('interest')) {
-    fallbackAnswer =
-      'Our No-Cost EMI spreads your ₹1,12,000 fee into 6 convenient monthly payments without extra interest charges. The final plan is reviewed and activated after your quick digital KYC.';
-  } else if (qLower.includes('co-applicant') || qLower.includes('parent') || qLower.includes('father')) {
-    fallbackAnswer =
-      'A co-applicant is an earning parent or guardian who supports your financing application. Both salaried and self-employed parents can serve as your co-applicant.';
-  } else if (qLower.includes('document') || qLower.includes('pan') || qLower.includes('aadhaar')) {
-    fallbackAnswer =
-      'For your digital KYC, keep your PAN card, Aadhaar details, and basic address proof ready. Having them on hand makes verification quick and effortless.';
-  } else if (qLower.includes('receipt') || qLower.includes('invoice') || qLower.includes('tax')) {
-    fallbackAnswer =
-      'Once payment is complete, you can download your official fee receipt with complete tax breakdown directly from this portal.';
-  } else {
-    fallbackAnswer = `Here is what to know for ${script.title}: ${script.keyPoints[0]}. If you need further help, our counselor team is also available on helpline.`;
-  }
-
+  // Fallback localized answer
   return res.json({
     success: true,
-    answer: fallbackAnswer,
-    source: 'rule_fallback',
+    answer: script.speech,
+    source: 'script_fallback',
     step: currentStep,
+    language: targetLanguage,
   });
+});
+
+// Google TTS endpoint for high-quality Indian regional voice synthesis (Telugu, Hindi, Tamil, Kannada, English)
+app.get('/api/voice-guide/tts', async (req, res) => {
+  const text = (req.query.text as string || '').trim();
+  const lang = (req.query.lang as string || 'en').trim().toLowerCase();
+  if (!text) return res.status(400).json({ error: 'Text is required' });
+
+  try {
+    const langCodeMap: Record<string, string> = {
+      telugu: 'te',
+      te: 'te',
+      hindi: 'hi',
+      hi: 'hi',
+      tamil: 'ta',
+      ta: 'ta',
+      kannada: 'kn',
+      kn: 'kn',
+      malayalam: 'ml',
+      ml: 'ml',
+      marathi: 'mr',
+      mr: 'mr',
+      bengali: 'bn',
+      bn: 'bn',
+      gujarati: 'gu',
+      gu: 'gu',
+      english: 'en',
+      en: 'en',
+    };
+    const code = langCodeMap[lang] || 'en';
+    const audioUrl = googleTTS.getAudioUrl(text.slice(0, 200), {
+      lang: code,
+      slow: false,
+      host: 'https://translate.google.com',
+      timeout: 10000,
+    });
+
+    return res.json({ success: true, audioUrl, lang: code });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to generate TTS audio' });
+  }
 });
 
 // -------------------------------------------------------------

@@ -91,6 +91,7 @@ export interface LearnerProfile {
   mobileMasked: string;
   emailMasked?: string;
   registrationId?: string;
+  preferredLanguage?: string;
 }
 
 export interface ProgramDetails {
@@ -192,6 +193,9 @@ export interface JourneyMeta {
   nextAction: JourneyNextAction;
   progressPercent: number;
   recommendedRoute: PortalRoute;
+  resolvedStep?: string;
+  completedSteps?: string[];
+  stepIndex?: number;
   lastUpdated: string;
 }
 

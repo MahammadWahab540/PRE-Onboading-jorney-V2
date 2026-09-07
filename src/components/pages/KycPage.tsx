@@ -2,8 +2,6 @@ import React, { useState } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import {
   ShieldCheck,
-  FileText,
-  Upload,
   Clock,
   CheckCircle2,
   AlertTriangle,
@@ -11,7 +9,6 @@ import {
   ArrowRight,
   ArrowLeft,
   RefreshCw,
-  FileCheck,
   Sparkles,
   HelpCircle,
 } from 'lucide-react';
@@ -42,11 +39,34 @@ export const KycPage: React.FC<KycPageProps> = ({
   const currentStatus: KycStatus = kyc?.status || 'NOT_STARTED';
 
   const [isProcessing, setIsProcessing] = useState(false);
-  const [panNumber, setPanNumber] = useState('ABCDE1234F');
-  const [aadhaarLast4, setAadhaarLast4] = useState('8831');
-  const [bankFileSelected, setBankFileSelected] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Submit KYC Documents
+  // External CCBP KYC URL — do NOT mark KYC as completed locally
+  const CCBP_KYC_URL =
+    'https://accounts.ccbp.in/login?client_id=otg&call_back_url=https://learning.ccbp.in/academy-get-started&mode=otp&WINDOW_MODE=IN_APP';
+
+  const handleStartKyc = () => {
+    // Navigate in the same tab so the user returns to this page after KYC
+    window.location.href = CCBP_KYC_URL;
+  };
+
+  // Pull latest journey/KYC state from Salesforce on demand
+  const handleRefreshStatus = async () => {
+    setIsRefreshing(true);
+    try {
+      const res = await fetch(`/api/enrollment/${token}/journey`);
+      const data = await res.json();
+      if (res.ok && data.journey) {
+        onUpdateJourney(data.journey);
+      }
+    } catch (err) {
+      console.error('Failed to refresh KYC status:', err);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  // Legacy document action (kept for ACTION_REQUIRED re-upload flow)
   const handleAction = async (actionType: 'SUBMIT' | 'RETRY_DOCUMENTS' | 'COMPLETE') => {
     setIsProcessing(true);
     try {
@@ -193,105 +213,69 @@ export const KycPage: React.FC<KycPageProps> = ({
                 <p className="text-xs text-slate-600 mt-1 leading-relaxed">
                   Our verification desk and NBFC partner are validating the submitted documents. Typical turnaround is 2 to 4 hours. You will receive an SMS confirmation.
                 </p>
-
-                {/* Simulated Quick Action for Demo Testing */}
-                <div className="mt-3 pt-3 border-t border-blue-200/60 flex items-center justify-between">
-                  <span className="text-[11px] text-slate-500 font-medium">Demo Simulator:</span>
-                  <button
-                    type="button"
-                    onClick={() => handleAction('COMPLETE')}
-                    disabled={isProcessing}
-                    className="text-xs font-bold text-[#0B63E5] hover:underline cursor-pointer flex items-center gap-1"
-                  >
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span>Simulate Approval</span>
-                  </button>
-                </div>
               </div>
             </div>
           </div>
         )}
 
         {/* -------------------------------------------------------------
-            CASE 1 & 2: NOT_STARTED / IN_PROGRESS (Interactive Document Form)
+            CASE 1 & 2: NOT_STARTED / IN_PROGRESS — Redirect to CCBP KYC Portal
             ------------------------------------------------------------- */}
         {(currentStatus === 'NOT_STARTED' || currentStatus === 'IN_PROGRESS') && (
           <div className="space-y-4 text-left mb-6">
-            {/* PAN Card Input */}
-            <div className="p-4 rounded-xl border border-slate-200 bg-[#F8FAFC]">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold text-slate-800 flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-[#0B63E5]" />
-                  <span>Co-Applicant PAN Card</span>
-                </span>
-                <span className="text-[11px] text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                  Ready
-                </span>
-              </div>
-              <input
-                type="text"
-                value={panNumber}
-                onChange={(e) => setPanNumber(e.target.value.toUpperCase())}
-                placeholder="ABCDE1234F"
-                maxLength={10}
-                className="w-full p-2.5 rounded-lg border border-slate-300 font-mono text-xs font-semibold bg-white uppercase focus:border-[#0B63E5] outline-none"
-              />
-            </div>
-
-            {/* Aadhaar / DigiLocker */}
-            <div className="p-4 rounded-xl border border-slate-200 bg-[#F8FAFC]">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold text-slate-800 flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-[#0B63E5]" />
-                  <span>Aadhaar Verification (DigiLocker)</span>
-                </span>
-                <span className="text-[11px] text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                  Connected
-                </span>
-              </div>
-              <p className="text-xs text-slate-600 mb-1">
-                Authenticated via Aadhaar OTP (Ending in •••• {aadhaarLast4})
+            {/* What you need info card */}
+            <div className="p-4 rounded-xl border border-blue-200 bg-blue-50 text-left">
+              <p className="text-xs font-bold text-blue-800 uppercase tracking-wide mb-2">
+                What to keep ready
               </p>
+              <ul className="text-xs text-blue-700 space-y-1.5">
+                {[
+                  'Co-Applicant PAN Card',
+                  'Aadhaar Card (DigiLocker verification)',
+                  'Latest 3-month bank statement (PDF)',
+                ].map((item) => (
+                  <li key={item} className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
             </div>
 
-            {/* Bank Statement Upload */}
-            <div className="p-4 rounded-xl border border-slate-200 bg-[#F8FAFC]">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold text-slate-800 flex items-center gap-2">
-                  <Upload className="w-4 h-4 text-[#0B63E5]" />
-                  <span>Latest 3-Month Bank Statement</span>
-                </span>
-                <span className="text-[11px] text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                  PDF Attached
-                </span>
-              </div>
-              <p className="text-xs text-slate-600">
-                Official e-Statement uploaded: <span className="font-mono font-medium">HDFC_Bank_3M_Stmt.pdf</span>
-              </p>
-            </div>
-
-            {/* Submit CTA */}
+            {/* Primary CTA — CCBP KYC Portal */}
             <button
-              id="submit-kyc-documents-btn"
+              id="continue-to-kyc-verification-btn"
               type="button"
-              onClick={() => handleAction('SUBMIT')}
-              disabled={isProcessing}
-              className="w-full py-3.5 px-4 rounded-xl bg-[#0B63E5] hover:bg-blue-600 active:scale-[0.99] text-white font-semibold text-xs sm:text-sm shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              onClick={handleStartKyc}
+              className="w-full py-3.5 px-4 rounded-xl bg-[#0B63E5] hover:bg-blue-600 active:scale-[0.99] text-white font-semibold text-xs sm:text-sm shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
-              {isProcessing ? (
+              <ShieldCheck className="w-4 h-4" />
+              <span>Continue to KYC Verification</span>
+            </button>
+
+            {/* Secondary — pull latest status from Salesforce */}
+            <button
+              id="refresh-kyc-status-btn"
+              type="button"
+              onClick={handleRefreshStatus}
+              disabled={isRefreshing}
+              className="w-full py-2.5 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 font-medium text-xs sm:text-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+            >
+              {isRefreshing ? (
                 <>
                   <RefreshCw className="w-4 h-4 animate-spin" />
-                  <span>Submitting Documents...</span>
+                  <span>Checking latest status...</span>
                 </>
               ) : (
                 <>
-                  <FileCheck className="w-4 h-4" />
-                  <span>Submit KYC Documents for Review</span>
+                  <RefreshCw className="w-4 h-4" />
+                  <span>I've completed KYC — Refresh Status</span>
                 </>
               )}
             </button>
           </div>
         )}
+
 
         {/* Action Navigation Footer */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-5 border-t border-slate-100">

@@ -33,15 +33,15 @@ export const ClassAccessPage: React.FC<ClassAccessPageProps> = ({
       ? rawLearnerName
       : typeof rawLearnerName === 'object' && rawLearnerName && (rawLearnerName as any).name
       ? String((rawLearnerName as any).name)
-      : 'Rahul Kumar';
+      : 'Learner';
   const programName =
-    typeof state.program?.name === 'string' ? state.program.name : 'NxtWave Genius';
-  const enrollmentUid = state.canonicalJourney?.journey.applicationId || 'UID-GENIUS-2026-8831';
+    typeof state.program?.name === 'string' ? state.program.name : 'NxtWave Program';
+  const enrollmentUid = state.canonicalJourney?.journey.applicationId || state.token || '';
   const receiptId =
     state.payment.receiptId ||
     state.canonicalJourney?.payment.receiptId ||
-    'RCP-DIRECT-2026-0921';
-  const batchStartDate = '15 September 2026';
+    '';
+  const batchStartDate = state.canonicalJourney?.journey?.batchStartDate || 'To be announced';
 
   const [isResetting, setIsResetting] = useState(false);
 
@@ -190,21 +190,7 @@ export const ClassAccessPage: React.FC<ClassAccessPageProps> = ({
           </div>
         </div>
 
-        {/* Reset Session Option for Testing */}
-        {onResetSession && (
-          <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
-            <span>QA Testing Utility</span>
-            <button
-              type="button"
-              onClick={onResetSession}
-              disabled={isResetting}
-              className="text-slate-500 hover:text-slate-700 flex items-center gap-1 font-medium cursor-pointer"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>Reset Demo Journey</span>
-            </button>
-          </div>
-        )}
+
       </motion.div>
     </div>
   );

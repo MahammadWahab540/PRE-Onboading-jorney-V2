@@ -7,6 +7,11 @@ import type {
 import type { SalesforceOnboardingRecord } from './types';
 import { mapNbfcStatus } from './nbfcStatusMapper';
 import { resolveJourneyState } from '../../orchestrator/journeyOrchestrator';
+import {
+  resolveSalesforceStage,
+  logEnrollmentSync,
+  STEP_DEFINITIONS,
+} from '../../domain/salesforceStageMapper';
 
 export function maskPhone(phone?: string | null): string {
   if (!phone) return '+91 ••••••••••';
@@ -50,6 +55,21 @@ export function mapPaymentStatus(
 }
 
 export function mapKycStatus(record: SalesforceOnboardingRecord): KycStatus {
+  const onboardingStatus = (record.Onboarding_Status__c || '').trim().toLowerCase();
+
+  // Onboarding_Status__c picklist overrides
+  if (onboardingStatus === 'kyc submitted') {
+    return 'SUBMITTED';
+  }
+  if (
+    onboardingStatus === 'application in nbfc' ||
+    onboardingStatus === 'emi setup done' ||
+    onboardingStatus === 'full payment done' ||
+    onboardingStatus === 'installments done'
+  ) {
+    return 'VERIFIED';
+  }
+
   const subStatus = (record.KYC_Submission_Status__c || record.KYC_Submission_Status_PRE__c || '').toUpperCase();
   const callStatus = (record.KYC_Call_Status_PRE__c || '').toUpperCase();
 
@@ -71,6 +91,33 @@ export function mapKycStatus(record: SalesforceOnboardingRecord): KycStatus {
   return 'NOT_STARTED';
 }
 
+export function mapOnboardingStatusToRoute(onboardingStatus?: string | null): string | null {
+  if (!onboardingStatus) return null;
+  const status = onboardingStatus.trim().toLowerCase();
+  switch (status) {
+    case 'yet to fill kyc':
+    case 'kyc submitted':
+      return 'kyc';
+    case 'application in nbfc':
+    case 'emi setup done':
+      return 'nbfc-status';
+    case 'full payment done':
+    case 'installments done':
+      return 'class-access';
+    case 'yet to pay':
+      return 'pay';
+    case 'yet to assign':
+    case 'yet to contact':
+    case 'manager approval pending':
+    case 'yet to decide':
+    case 'dependency':
+    case 'will do later':
+      return 'program';
+    default:
+      return null;
+  }
+}
+
 /**
  * Transforms an Enterprise Salesforce Onboarding Record into the Canonical EnrollmentJourney.
  */
@@ -78,7 +125,7 @@ export function mapSalesforceToJourney(
   record: SalesforceOnboardingRecord,
   sessionToken: string
 ): EnrollmentJourney {
-  const rawStudentName = record.Student_Name__c;
+  const rawStudentName = record.Student_Name__c || record.Name;
   const learnerName =
     typeof rawStudentName === 'string'
       ? rawStudentName
@@ -90,12 +137,12 @@ export function mapSalesforceToJourney(
       ? learnerName.split(' ')[0] || 'Learner'
       : 'Learner';
 
-  const baseFee = record.Product_Price__c || 160000;
+  const baseFee = record.Product_Price__c || 180000;
   const scholarshipAmount =
-    record.Scholarship_Amount__c || record.Merit_Scholarship_Amount_PRE__c || 30000;
-  const seatReservationPaid = record.Seat_Reservation_Amount_Paid__c || 18000;
+    record.Scholarship_Amount__c || record.Merit_Scholarship_Amount_PRE__c || record.Payment_Plan_Discount__c || 0;
+  const seatReservationPaid = record.Seat_Reservation_Amount_Paid__c || record.Total_Amount_PRE__c || 0;
   const amountPayable =
-    record.Amount_Payable_PRE__c || Math.max(0, baseFee - scholarshipAmount - seatReservationPaid);
+    record.Amount_Payable_PRE__c || record.Remaining_Amount_To_Be_Paid_PRE__c || Math.max(0, baseFee - scholarshipAmount - seatReservationPaid);
 
   const paymentMethod = mapPaymentMethod(record.Payment_Plan_PRE__c);
   const paymentStatus = mapPaymentStatus(
@@ -174,7 +221,7 @@ export function mapSalesforceToJourney(
   // Class access
   const isClassUnlocked =
     record.LMS_Access_Status__c === 'Active' ||
-    paymentStatus === 'SUCCESS' ||
+    (paymentMethod !== 'NO_COST_EMI' && paymentStatus === 'SUCCESS') ||
     financing?.status === 'DISBURSED';
 
   const classAccess = {
@@ -195,10 +242,16 @@ export function mapSalesforceToJourney(
       name: learnerName,
       firstName,
       mobileMasked: maskPhone(
-        record.Student_WhatsApp_Number__c || record.Student_Number__c || record.PHONE_NUMBER__c
+        record.Student_WhatsApp_Number__c ||
+          record.Student_Number__c ||
+          record.PHONE_NUMBER__c ||
+          record.Parent_Guardian_Phone_Number_PRE__c
       ),
       emailMasked: maskEmail(record.Email_PRE__c),
-      registrationId: record.Program_Registered_UID_PRE__c || record.Name,
+      registrationId: record.Program_Registered_UID_PRE__c || record.userId__c || record.Name,
+      preferredLanguage: (record.Preferred_Languages__c || record.Latest_Preferred_Language__c || 'English')
+        .split(';')[0]
+        .trim(),
     },
     program: {
       name: record.Program_PRE__c || 'Genius',
@@ -237,14 +290,67 @@ export function mapSalesforceToJourney(
     },
   };
 
+  // 1. Resolve Salesforce Stage authoritative definition
+  const sfResolved = resolveSalesforceStage(record.Onboarding_Status__c, record.Id);
+  const sfStepIndex = sfResolved.stageDefinition.stepIndex;
+
   // Compute canonical journey stage & recommended route
   const resolution = resolveJourneyState(draftJourney);
+
+  let recommendedRoute = resolution.recommendedRoute;
+
+  // Primary: If Salesforce Onboarding_Status__c maps to a known step, use its canonical route
+  if (draftJourney.authenticated && sfResolved.isKnown) {
+    if (resolution.recommendedRoute !== 'class-access') {
+      recommendedRoute = sfResolved.stageDefinition.canonicalRoute;
+    }
+  }
+
+  // Secondary: Allow Stage_PRE__c ONLY if its step index is >= Salesforce Onboarding_Status__c step index (prevent regression)
+  if (draftJourney.authenticated && record.Stage_PRE__c) {
+    const saved = record.Stage_PRE__c.trim().toLowerCase();
+    const routeToStepIndex: Record<string, number> = {
+      auth: 1,
+      program: 2,
+      congratulations: 2,
+      pay: 3,
+      payment: 3,
+      emi: 3,
+      'co-applicant': 4,
+      kyc: 5,
+      'nbfc-status': 6,
+      'nbfc-review': 6,
+      'class-access': 7,
+      'payment-success': 7,
+    };
+    const savedIndex = routeToStepIndex[saved];
+    if (savedIndex !== undefined && savedIndex >= sfStepIndex) {
+      if (resolution.recommendedRoute !== 'class-access') {
+        recommendedRoute = (saved === 'congratulations' ? 'program' : saved) as any;
+      }
+    }
+  }
+
+  // Structured logging for debug/sync auditing
+  logEnrollmentSync({
+    recordId: record.Id,
+    salesforceStage: sfResolved.salesforceStage,
+    normalizedStage: sfResolved.normalizedStage,
+    resolvedStep: sfResolved.stageDefinition.stepId,
+    active: true,
+    routeBefore: record.Stage_PRE__c || 'N/A',
+    routeAfter: recommendedRoute,
+    lastModifiedDate: (record as any).LastModifiedDate || null,
+  });
 
   draftJourney.journey = {
     currentStage: resolution.currentStage,
     nextAction: resolution.nextAction,
     progressPercent: resolution.progressPercent,
-    recommendedRoute: resolution.recommendedRoute,
+    recommendedRoute,
+    resolvedStep: sfResolved.stageDefinition.stepId,
+    completedSteps: sfResolved.stageDefinition.completedSteps,
+    stepIndex: sfResolved.stageDefinition.stepIndex,
     lastUpdated: new Date().toISOString(),
   };
 
