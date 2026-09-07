@@ -57,6 +57,148 @@ interface AdminRecordItem {
   portalUrl: string;
 }
 
+export const JOURNEY_STEPS = [
+  { index: 1, name: 'Identity', key: 'identity' },
+  { index: 2, name: 'Program', key: 'program' },
+  { index: 3, name: 'Payment', key: 'payment' },
+  { index: 4, name: 'Co-Applicant', key: 'co-applicant' },
+  { index: 5, name: 'KYC', key: 'kyc' },
+  { index: 6, name: 'NBFC Review', key: 'nbfc-review' },
+  { index: 7, name: 'Class Access', key: 'class-access' },
+];
+
+export function computeActiveStepIndex(record: SalesforceRecord, journey?: any): number {
+  if (journey && journey.journey && typeof journey.journey.stepIndex === 'number') {
+    return journey.journey.stepIndex;
+  }
+
+  const status = (record.Onboarding_Status__c || '').trim().toLowerCase();
+
+  if (['full payment done', 'installments done', 'disbursed'].includes(status)) {
+    return 7;
+  }
+
+  if (
+    [
+      'application in nbfc',
+      'nbfc approved',
+      'application submitted',
+      'emi setup done',
+      'not interested to shift nbfc',
+    ].includes(status)
+  ) {
+    return 6;
+  }
+
+  if (
+    ['yet to fill kyc', 'kyc pending', 'kyc submitted'].includes(status) ||
+    record.KYC_Submitted__c ||
+    (record.KYC_Submission_Status_PRE__c &&
+      record.KYC_Submission_Status_PRE__c.toUpperCase() === 'SUBMITTED')
+  ) {
+    return 5;
+  }
+
+  if (
+    status === 'co-applicant' ||
+    record.Co_Applicant_Name__c ||
+    record.Co_Applicant_Phone_Number_PRE__c
+  ) {
+    return 4;
+  }
+
+  if (
+    ['yet to pay', 'payment pending'].includes(status) ||
+    (record.Total_Amount_PRE__c && record.Total_Amount_PRE__c > 0) ||
+    record.Current_Payment_Status__c === 'Success'
+  ) {
+    return 3;
+  }
+
+  if (
+    [
+      'yet to assign',
+      'yet to contact',
+      'manager approval pending',
+      'yet to decide',
+      'dependency',
+      'will do later',
+      'program selection',
+    ].includes(status)
+  ) {
+    return 2;
+  }
+
+  return 2;
+}
+
+export const AdminJourneyStepper: React.FC<{ activeIndex: number; currentStageName?: string }> = ({
+  activeIndex,
+  currentStageName,
+}) => {
+  return (
+    <div className="bg-slate-900 text-white rounded-xl p-5 border border-slate-800 shadow-md">
+      <div className="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
+        <h4 className="font-bold text-sm text-slate-200 flex items-center gap-2">
+          <span>Learner Journey Stages</span>
+          <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-400/30">
+            Step {activeIndex} of 7
+          </span>
+        </h4>
+        {currentStageName && (
+          <span className="text-xs font-mono text-slate-400">
+            SF Stage: <strong className="text-blue-400">{currentStageName}</strong>
+          </span>
+        )}
+      </div>
+
+      <div className="space-y-2 font-mono text-xs">
+        {JOURNEY_STEPS.map((step) => {
+          const isCompleted = step.index < activeIndex;
+          const isActive = step.index === activeIndex;
+          const isUpcoming = step.index > activeIndex;
+
+          return (
+            <div
+              key={step.index}
+              className={`flex items-center justify-between py-2 px-3.5 rounded-lg transition-colors ${
+                isActive
+                  ? 'bg-blue-600/2 border border-blue-500/50 text-blue-200 font-semibold'
+                  : isCompleted
+                  ? 'bg-emerald-950/30 text-emerald-300/90'
+                  : 'bg-slate-800/40 text-slate-400/70'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <span className="font-sans font-medium">
+                  Step {step.index} ({step.name})
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs font-semibold">
+                {isCompleted && (
+                  <span className="text-emerald-400 flex items-center gap-1">
+                    ✅ Completed
+                  </span>
+                )}
+                {isActive && (
+                  <span className="text-blue-400 flex items-center gap-1">
+                    🔵 Active Current Step
+                  </span>
+                )}
+                {isUpcoming && (
+                  <span className="text-slate-400 flex items-center gap-1">
+                    ⚪ Upcoming
+                  </span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 export const AdminPortal: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [records, setRecords] = useState<AdminRecordItem[]>([]);
@@ -478,6 +620,19 @@ export const AdminPortal: React.FC = () => {
                               {rec.Onboarding_Status__c}
                             </span>
                           )}
+                          {(() => {
+                            const activeStepIndex = computeActiveStepIndex(rec, item.journey);
+                            const activeStepObj = JOURNEY_STEPS.find((s) => s.index === activeStepIndex);
+                            return (
+                              <div className="mt-1">
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-semibold">
+                                  <span>Step {activeStepIndex}/7</span>
+                                  <span>•</span>
+                                  <span>{activeStepObj?.name}</span>
+                                </span>
+                              </div>
+                            );
+                          })()}
                         </td>
 
                         {/* Actions */}
@@ -598,6 +753,12 @@ export const AdminPortal: React.FC = () => {
                   </button>
                 </div>
               </div>
+
+              {/* Visual 7-Stage Stepper Checklist */}
+              <AdminJourneyStepper
+                activeIndex={computeActiveStepIndex(selectedItem.record, selectedItem.journey)}
+                currentStageName={selectedItem.record.Onboarding_Status__c || 'In Progress'}
+              />
 
               {/* Trigger OTP Direct Box */}
               <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">

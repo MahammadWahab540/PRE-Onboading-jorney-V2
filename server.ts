@@ -1168,7 +1168,6 @@ app.get('/api/voice-guide/tts', async (req, res) => {
       lang: code,
       slow: false,
       host: 'https://translate.google.com',
-      timeout: 10000,
     });
 
     return res.json({ success: true, audioUrl, lang: code });
