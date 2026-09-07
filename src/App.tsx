@@ -282,12 +282,20 @@ export default function App() {
 
             const serverIndex = routeToStepIndex[serverRoute] || 1;
             const requestedIndex = parsedRoute ? (routeToStepIndex[parsedRoute] || 1) : 1;
+            const isClassUnlocked = canonical.classAccess?.status === 'ACTIVE';
 
             let targetRoute = serverRoute;
 
-            // Route Guard: Prevent regressing to earlier completed steps via URL
+            // Route Guard: Prevent jumping to class-access if locked, or regressing behind server step
             if (parsedRoute && parsedRoute !== 'auth' && requestedIndex >= serverIndex) {
-              targetRoute = parsedRoute;
+              if (parsedRoute === 'class-access' && !isClassUnlocked) {
+                console.log(
+                  `[EnrollmentSync] 🛡️ Route Guard: Class access is locked. Redirecting from '/class-access' to authoritative stage '${serverRoute}'.`
+                );
+                targetRoute = serverRoute;
+              } else {
+                targetRoute = parsedRoute;
+              }
             } else {
               if (parsedRoute && requestedIndex < serverIndex) {
                 console.log(

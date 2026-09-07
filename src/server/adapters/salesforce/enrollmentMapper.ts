@@ -306,15 +306,15 @@ export function mapSalesforceToJourney(
 
   let recommendedRoute = resolution.recommendedRoute;
 
-  // Primary: If Salesforce Onboarding_Status__c maps to a known step, use its canonical route
+  // Primary: If Salesforce Onboarding_Status__c maps to a known step, use its canonical route as authoritative
   if (draftJourney.authenticated && sfResolved.isKnown) {
-    if (resolution.recommendedRoute !== 'class-access') {
-      recommendedRoute = sfResolved.stageDefinition.canonicalRoute;
+    if (!isClassUnlocked || sfResolved.stageDefinition.canonicalRoute === 'class-access') {
+      recommendedRoute = sfResolved.stageDefinition.canonicalRoute as any;
     }
   }
 
-  // Secondary: Allow Stage_PRE__c ONLY if its step index is >= Salesforce Onboarding_Status__c step index (prevent regression)
-  if (draftJourney.authenticated && record.Stage_PRE__c) {
+  // Secondary: Allow Stage_PRE__c ONLY if Onboarding_Status__c is unknown and saved index is valid
+  if (draftJourney.authenticated && record.Stage_PRE__c && !sfResolved.isKnown) {
     const saved = record.Stage_PRE__c.trim().toLowerCase();
     const routeToStepIndex: Record<string, number> = {
       auth: 1,
@@ -332,7 +332,7 @@ export function mapSalesforceToJourney(
     };
     const savedIndex = routeToStepIndex[saved];
     if (savedIndex !== undefined && savedIndex >= sfStepIndex) {
-      if (resolution.recommendedRoute !== 'class-access') {
+      if (!isClassUnlocked) {
         recommendedRoute = (saved === 'congratulations' ? 'program' : saved) as any;
       }
     }
