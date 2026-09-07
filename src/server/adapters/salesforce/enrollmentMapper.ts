@@ -100,10 +100,11 @@ export function mapOnboardingStatusToRoute(onboardingStatus?: string | null): st
     case 'kyc submitted':
       return 'kyc';
     case 'application in nbfc':
-    case 'emi setup done':
       return 'nbfc-status';
+    case 'emi setup done':
     case 'full payment done':
     case 'installments done':
+    case 'disbursed':
       return 'class-access';
     case 'yet to pay':
       return 'pay';
@@ -220,10 +221,14 @@ export function mapSalesforceToJourney(
   }
 
   // Class access
+  const rawStatusLower = (record.Onboarding_Status__c || record.Northern_Arc_Overall_Stages__c || '').toLowerCase();
+  const isEmiSetupDone = rawStatusLower.includes('emi setup done') || rawStatusLower.includes('mandate success');
+
   const isClassUnlocked =
     record.LMS_Access_Status__c === 'Active' ||
     (paymentMethod !== 'NO_COST_EMI' && paymentStatus === 'SUCCESS') ||
-    financing?.status === 'DISBURSED';
+    financing?.status === 'DISBURSED' ||
+    isEmiSetupDone;
 
   const classAccess = {
     status: (isClassUnlocked ? 'ACTIVE' : 'LOCKED') as 'ACTIVE' | 'LOCKED',

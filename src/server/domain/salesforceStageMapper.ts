@@ -92,14 +92,14 @@ const SALESFORCE_STAGE_MAP: Record<string, StageDefinition> = {
   'kyc pending': STEP_DEFINITIONS.kyc,
   'kyc submitted': STEP_DEFINITIONS.kyc,
 
-  // NBFC Review (Application in NBFC, EMI Setup Done, etc.)
+  // NBFC Review (Application in NBFC, etc.)
   'application in nbfc': STEP_DEFINITIONS['nbfc-review'],
   'nbfc approved': STEP_DEFINITIONS['nbfc-review'],
   'application submitted': STEP_DEFINITIONS['nbfc-review'],
-  'emi setup done': STEP_DEFINITIONS['nbfc-review'],
   'not interested to shift nbfc': STEP_DEFINITIONS['nbfc-review'],
 
-  // Class Access
+  // Class Access (Full Payment, Installments, Disbursed, EMI Setup Done)
+  'emi setup done': STEP_DEFINITIONS['class-access'],
   'full payment done': STEP_DEFINITIONS['class-access'],
   'installments done': STEP_DEFINITIONS['class-access'],
   'disbursed': STEP_DEFINITIONS['class-access'],

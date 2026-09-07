@@ -385,6 +385,7 @@ export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
                     type="button"
                     onClick={() => {
                       if (nbfcData.callToAction?.action === 'SETUP_EMI') handleNbfcAction('SETUP_EMI');
+                      else if (nbfcData.callToAction?.action === 'GO_TO_CLASS_ACCESS') onComplete();
                       else if (nbfcData.callToAction?.action === 'RETRY_DOCUMENTS') handleNbfcAction('RETRY_DOCUMENTS');
                       else if (nbfcData.callToAction?.action === 'CHANGE_CO_APPLICANT') onSwitchCoApplicant();
                     }}

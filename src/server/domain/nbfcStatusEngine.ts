@@ -8,7 +8,7 @@ export interface NormalizedNbfcStatusResponse {
   userMessage: string;
   callToAction: {
     label: string;
-    action: 'SETUP_EMI' | 'RETRY_DOCUMENTS' | 'CHANGE_CO_APPLICANT' | 'REFRESH' | 'NONE';
+    action: 'SETUP_EMI' | 'RETRY_DOCUMENTS' | 'CHANGE_CO_APPLICANT' | 'GO_TO_CLASS_ACCESS' | 'REFRESH' | 'NONE';
     primary: boolean;
   } | null;
   classAccessEta: string | null;
@@ -140,26 +140,43 @@ export function normalizeNbfcStatus(record?: Partial<SalesforceOnboardingRecord>
     };
   }
 
-  // 3. EMI SETUP IN PROGRESS
-  //    Matches: "NBFC Status: EMI Setup in Progress", "EMI Setup Done", "Mandate Success",
-  //             "Mandate Pending", "NACH_PENDING", "Disbursement Pending"
+  // 3. EMI SETUP DONE / MANDATE SUCCESS (Class Access Granted)
   if (
-    allLower.includes('emi setup in progress') ||
     allLower.includes('emi setup done') ||
     allLower.includes('mandate success') ||
+    allLower.includes('mandate_success')
+  ) {
+    return {
+      statusCode: 'EMI_SETUP_COMPLETED',
+      statusLabel: 'EMI Setup Completed (Class Access Granted)',
+      activeLender,
+      userMessage: `Congratulations! Your EMI auto-debit setup with ${activeLender} is complete and your class access has been granted! 🎉`,
+      callToAction: {
+        label: 'Go to Class Access 🎉',
+        action: 'GO_TO_CLASS_ACCESS',
+        primary: true,
+      },
+      classAccessEta: 'Class Access Granted 🎉',
+      lastUpdated,
+      rawStatus,
+    };
+  }
+
+  // 4. EMI SETUP IN PROGRESS
+  if (
+    allLower.includes('emi setup in progress') ||
     allLower.includes('mandate pending') ||
     allLower.includes('nach_pending') ||
     allLower.includes('disbursement pending') ||
-    allLower.includes('disbursement_pending') ||
-    allLower.includes('mandate_success')
+    allLower.includes('disbursement_pending')
   ) {
     return {
       statusCode: 'EMI_SETUP_COMPLETED',
       statusLabel: 'EMI Setup in Progress',
       activeLender,
-      userMessage: `Your auto-debit mandate is being verified by ${activeLender}. Class access is expected within 2–3 days.`,
+      userMessage: `Your auto-debit mandate is being verified by ${activeLender}. Class access will be granted shortly.`,
       callToAction: null,
-      classAccessEta: '2–3 business days',
+      classAccessEta: 'Within 24 hours',
       lastUpdated,
       rawStatus,
     };

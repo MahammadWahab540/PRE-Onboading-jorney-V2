@@ -45,6 +45,25 @@ export const ClassAccessPage: React.FC<ClassAccessPageProps> = ({
 
   const [isResetting, setIsResetting] = useState(false);
 
+  // Celebration confetti particles state
+  const [particles, setParticles] = useState<
+    Array<{ id: number; x: number; y: number; color: string; size: number; delay: number }>
+  >([]);
+
+  React.useEffect(() => {
+    if (prefersReducedMotion) return;
+    const colors = ['#0B63E5', '#10B981', '#F59E0B', '#3B82F6', '#8B5CF6', '#EC4899'];
+    const generated = Array.from({ length: 32 }).map((_, i) => ({
+      id: i,
+      x: (Math.random() - 0.5) * 360,
+      y: (Math.random() - 0.5) * 280 - 30,
+      color: colors[i % colors.length],
+      size: Math.floor(Math.random() * 7) + 4,
+      delay: Math.random() * 0.5,
+    }));
+    setParticles(generated);
+  }, [prefersReducedMotion]);
+
   const handleDownloadReceipt = () => {
     // Generates print/download receipt window
     window.print();
@@ -55,7 +74,35 @@ export const ClassAccessPage: React.FC<ClassAccessPageProps> = ({
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto px-4 py-8 sm:py-12">
+    <div className="w-full max-w-2xl mx-auto px-4 py-8 sm:py-12 relative overflow-hidden">
+      {/* Soft Confetti Burst */}
+      {!prefersReducedMotion && (
+        <div className="absolute inset-0 pointer-events-none flex items-center justify-center -top-24 z-10">
+          {particles.map((p) => (
+            <motion.div
+              key={p.id}
+              initial={{ scale: 0, x: 0, y: 0, opacity: 1 }}
+              animate={{
+                scale: [0, 1.2, 1],
+                x: p.x,
+                y: p.y,
+                opacity: [1, 1, 0],
+              }}
+              transition={{
+                duration: 1.4,
+                delay: p.delay,
+                ease: 'easeOut',
+              }}
+              className="absolute rounded-full"
+              style={{
+                width: p.size,
+                height: p.size,
+                backgroundColor: p.color,
+              }}
+            />
+          ))}
+        </div>
+      )}
       <motion.div
         initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
