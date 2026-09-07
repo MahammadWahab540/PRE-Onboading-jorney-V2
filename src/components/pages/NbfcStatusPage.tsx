@@ -89,7 +89,7 @@ export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
   // Derive display values from live NBFC data, falling back to journey state
   const lenderName = nbfcData?.activeLender || financing?.lenderName || 'Finance partner is being assigned';
   const status = (nbfcData?.statusCode || financing?.status || 'UNDER_REVIEW') as string;
-  const activeNbfcChild = nbfcData?.allNbfcs?.find((n) => n.isActive);
+  const activeNbfcChild = nbfcData?.allNbfcs?.find((n) => n.isActive && n.facilityAmount > 0) || nbfcData?.allNbfcs?.find((n) => n.facilityAmount > 0) || nbfcData?.allNbfcs?.[0];
   const masterFacilityAmount = activeNbfcChild?.facilityAmount || financing?.appliedAmount || 0;
   const appliedAmount = masterFacilityAmount;
   const facilityAmountText = appliedAmount > 0 ? `₹${appliedAmount.toLocaleString('en-IN')}` : 'N/A';

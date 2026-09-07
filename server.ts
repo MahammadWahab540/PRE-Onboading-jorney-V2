@@ -676,9 +676,27 @@ app.get('/api/enrollment/:token/nbfc-status', async (req, res) => {
       };
     });
 
-    // If an active NBFC child record exists with a Facility Amount > 0, set appliedAmount to that Facility Amount
-    const activeNbfcChild = allNbfcs.find((n) => n.isActive && n.facilityAmount > 0);
-    if (activeNbfcChild && journey.financing) {
+    // Match active NBFC child record (Query 2 active__c = true) and set appliedAmount to Master_Applied_Loan_Amount__c
+    const activeNbfcChild =
+      allNbfcs.find((n) => n.isActive && n.facilityAmount > 0) ||
+      allNbfcs.find((n) => n.facilityAmount > 0);
+
+    if (!journey.financing) {
+      journey.financing = {
+        applied: true,
+        appliedAmount: activeNbfcChild?.facilityAmount || 0,
+        nbfcName: normalized.activeLender || record.Choose_NBFC_PRE__c || 'NORTHERN ARC',
+        applicationId: activeNbfcChild?.appId || `NBFC-${record.Id.slice(-6).toUpperCase()}`,
+        status: normalized.statusCode as any,
+        statusLabel: normalized.statusLabel,
+        approvedAmount: activeNbfcChild?.approvedLoanAmount || activeNbfcChild?.facilityAmount || 0,
+        approvedTenure: '6 Months',
+        emiAmountMonthly: 0,
+        emiTenure: '6 Months',
+        disbursedAmount: record.Disbursed_Amount_PRE__c,
+        disbursedAt: record.Disbursed_Date_Time__c,
+      };
+    } else if (activeNbfcChild && activeNbfcChild.facilityAmount > 0) {
       journey.financing.appliedAmount = activeNbfcChild.facilityAmount;
     }
 
