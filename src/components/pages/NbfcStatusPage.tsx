@@ -89,9 +89,10 @@ export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
   // Derive display values from live NBFC data, falling back to journey state
   const lenderName = nbfcData?.activeLender || financing?.lenderName || 'Finance partner is being assigned';
   const status = (nbfcData?.statusCode || financing?.status || 'UNDER_REVIEW') as string;
-  const appliedAmount = financing?.appliedAmount || 112000;
-  const approvedAmount = financing?.approvedAmount || appliedAmount;
-  const emiPerMonth = Math.round(approvedAmount / 6);
+  const activeNbfcChild = nbfcData?.allNbfcs?.find((n) => n.isActive);
+  const masterFacilityAmount = activeNbfcChild?.facilityAmount || financing?.appliedAmount || 0;
+  const appliedAmount = masterFacilityAmount;
+  const facilityAmountText = appliedAmount > 0 ? `₹${appliedAmount.toLocaleString('en-IN')}` : 'N/A';
 
   // Fetch latest NBFC status from Salesforce (via normalized endpoint)
   const fetchLatestNbfcStatus = useCallback(async (isSilent = false) => {
@@ -280,13 +281,13 @@ export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
         </p>
 
         {/* LENDER METADATA & FINANCIAL SUMMARY */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 p-4 rounded-xl bg-slate-50 border border-slate-200 mb-6 text-left">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 rounded-xl bg-slate-50 border border-slate-200 mb-6 text-left">
           <div>
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
               Application Ref
             </span>
             <span className="text-xs font-mono font-bold text-slate-800">
-              {financing?.applicationId || 'APP-NA-2026-902'}
+              {activeNbfcChild?.appId || financing?.applicationId || 'N/A'}
             </span>
           </div>
           <div>
@@ -294,15 +295,7 @@ export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
               Facility Amount
             </span>
             <span className="text-xs font-mono font-bold text-slate-800">
-              ₹{appliedAmount.toLocaleString('en-IN')}
-            </span>
-          </div>
-          <div>
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-              Monthly EMI (6 Mo)
-            </span>
-            <span className="text-xs font-mono font-bold text-[#0B63E5]">
-              ₹{emiPerMonth.toLocaleString('en-IN')}/mo
+              {facilityAmountText}
             </span>
           </div>
           <div>
