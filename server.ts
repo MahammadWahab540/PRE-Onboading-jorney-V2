@@ -20,6 +20,7 @@ import { normalizeIndianPhone } from './src/server/domain/phoneNormalizer';
 import { deriveJourneyStageAndRoute } from './src/server/domain/journeyEngine';
 import { normalizeNbfcStatus, resolveActiveLenderName } from './src/server/domain/nbfcStatusEngine';
 import type { PaymentMethod } from './src/types/journey';
+import { getFullPaymentInfo } from './src/utils/paymentLinks';
 
 const app = express();
 const PORT = 3000;
@@ -508,9 +509,15 @@ app.post('/api/enrollment/:token/payment-link', async (req, res) => {
     const record = await salesforceClient.getRecordByToken(token);
     const learnerName = record?.Student_Name__c || 'Learner';
     const amountPayable = amount || record?.Amount_Payable_PRE__c || 112000;
+    const fullPaymentInfo = getFullPaymentInfo(record?.Program_PRE__c);
 
     const order = await paymentProvider.createOrder(token, amountPayable, learnerName);
-    return res.json({ success: true, ...order });
+    return res.json({
+      success: true,
+      ...order,
+      fullPaymentUrl: fullPaymentInfo.link,
+      fullPaymentLabel: fullPaymentInfo.label,
+    });
   } catch (err: any) {
     return res.status(500).json({ error: 'Failed to generate payment link' });
   }

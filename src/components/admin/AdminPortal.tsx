@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { getFullPaymentInfo } from '../../utils/paymentLinks';
 import {
   Search,
   RefreshCw,
@@ -885,6 +886,25 @@ export const AdminPortal: React.FC = () => {
                         {selectedItem.record.DP_Order_ID_PRE__c || selectedItem.record.Payment_Plan_PRE__c || 'N/A'}
                       </dd>
                     </div>
+                    {(() => {
+                      const fpInfo = getFullPaymentInfo(selectedItem.record.Program_PRE__c);
+                      return (
+                        <div className="pt-2 border-t border-slate-100">
+                          <dt className="text-slate-400 font-medium">{fpInfo.label}</dt>
+                          <dd className="mt-0.5">
+                            <a
+                              href={fpInfo.link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[#0B63E5] hover:underline font-mono text-[11px] break-all inline-flex items-center gap-1"
+                            >
+                              <span>{fpInfo.link}</span>
+                              <ExternalLink className="w-3 h-3 shrink-0" />
+                            </a>
+                          </dd>
+                        </div>
+                      );
+                    })()}
                   </dl>
                 </div>
 

@@ -12,6 +12,7 @@ import {
   logEnrollmentSync,
   STEP_DEFINITIONS,
 } from '../../domain/salesforceStageMapper';
+import { getFullPaymentLink } from '../../../utils/paymentLinks';
 
 export function maskPhone(phone?: string | null): string {
   if (!phone) return '+91 ••••••••••';
@@ -270,6 +271,7 @@ export function mapSalesforceToJourney(
       amountPaid: record.Amount_Paid_Till_Now_To_Nxtwave_PRE__c || 0,
       receiptId: record.Receipt_Id__c,
       paidAt: record.Payment_Date_Time__c,
+      paymentUrl: getFullPaymentLink(record.Program_PRE__c),
     },
     coApplicant: hasCoApplicant ? coApplicant : undefined,
     kyc: {
