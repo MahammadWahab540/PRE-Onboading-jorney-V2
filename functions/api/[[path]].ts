@@ -147,8 +147,8 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   if ((url.pathname === '/api/auth/send-otp' || url.pathname === '/api/admin/send-whatsapp-otp') && request.method === 'POST') {
     try {
       const body: any = await request.json();
-      const mobile = body?.mobileNumber || body?.phone || body?.identifier;
-      const cleanPhone = String(mobile || '9515622271').replace(/\D/g, '').slice(-10);
+      const mobile = body?.mobile || body?.mobileNumber || body?.phone || body?.identifier;
+      const cleanPhone = String(mobile || '').replace(/\D/g, '').slice(-10) || '9100886544';
 
       // Generate 6-digit OTP code
       const code = Math.floor(100000 + Math.random() * 900000).toString();
