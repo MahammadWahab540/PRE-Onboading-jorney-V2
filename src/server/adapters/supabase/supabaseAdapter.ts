@@ -97,6 +97,53 @@ export class SupabaseAdapter {
       return null;
     }
   }
+  public async getNbfcRecordsForLearner(
+    activeRecordId: string,
+    phone?: string | null
+  ): Promise<any[]> {
+    if (!this.client) return [];
+
+    const cleanPhone = phone ? phone.replace(/\D/g, '').slice(-10) : '';
+    try {
+      let query = this.client.from('nbfc_onboarding').select('*');
+
+      if (activeRecordId && cleanPhone && cleanPhone.length >= 7) {
+        query = query.or(`academy_onboarding_pre_l_c.eq.${activeRecordId},student_phone_number_c.ilike.%${cleanPhone}%`);
+      } else if (activeRecordId) {
+        query = query.eq('academy_onboarding_pre_l_c', activeRecordId);
+      } else if (cleanPhone && cleanPhone.length >= 7) {
+        query = query.ilike('student_phone_number_c', `%${cleanPhone}%`);
+      } else {
+        return [];
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false }).limit(20);
+
+      if (error) {
+        console.error('[Supabase] Error fetching NBFC records:', error.message);
+        return [];
+      }
+
+      if (!data) return [];
+
+      return data.map((row: any) => ({
+        Id: row.id,
+        Name: row.name || 'Partner NBFC',
+        Master_App_ID__c: row.master_app_id_c || null,
+        Master_Applied_Loan_Amount__c: Number(row.master_applied_loan_amount_c) || 0,
+        Master_Approved_Loan_Amount__c: Number(row.master_approved_loan_amount_c) || 0,
+        student_phone_number__c: row.student_phone_number_c || null,
+        Academy_Onboarding_PRE_L__c: row.academy_onboarding_pre_l_c || null,
+        Co_Applicant_Name_PRE__c: row.co_applicant_name_pre_c || null,
+        Co_Applicant_Phone_Number_PRE__c: row.co_applicant_phone_number_pre_c || null,
+        Relation_With_The_Co_Applicant_PRE__c: row.relation_with_the_co_applicant_pre_c || null,
+        Active__c: Boolean(row.active_c),
+      }));
+    } catch (err: any) {
+      console.error('[Supabase] Exception fetching NBFC records:', err.message);
+      return [];
+    }
+  }
 
   public mapRowToRecord(row: any): SalesforceOnboardingRecord {
     return {

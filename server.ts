@@ -7,6 +7,7 @@ import { GoogleGenAI } from '@google/genai';
 import * as googleTTS from 'google-tts-api';
 
 import { salesforceClient, salesforceRestClient } from './src/server/adapters/salesforce/client';
+import { supabaseAdapter } from './src/server/adapters/supabase/supabaseAdapter';
 import {
   mapSalesforceToJourney,
   maskPhone,
@@ -61,12 +62,21 @@ app.get('/api/enrollment/:token/journey', async (req, res) => {
       token
     );
 
-    // Query related child NBFC records to ensure financing.appliedAmount & applicationId reflect live SOQL data
+    // Query related child NBFC records (Supabase DB or Salesforce REST API)
     try {
-      const nbfcRecords = await salesforceRestClient.getNbfcRecordsForLearner(
-        record.Id,
-        record.PHONE_NUMBER__c || record.Student_WhatsApp_Number__c || record.Student_Number__c
-      );
+      let nbfcRecords: any[] = [];
+      if (supabaseAdapter.ready) {
+        nbfcRecords = await supabaseAdapter.getNbfcRecordsForLearner(
+          record.Id,
+          record.PHONE_NUMBER__c || record.Student_WhatsApp_Number__c || record.Student_Number__c
+        );
+      }
+      if (!nbfcRecords || nbfcRecords.length === 0) {
+        nbfcRecords = await salesforceRestClient.getNbfcRecordsForLearner(
+          record.Id,
+          record.PHONE_NUMBER__c || record.Student_WhatsApp_Number__c || record.Student_Number__c
+        );
+      }
       if (nbfcRecords && nbfcRecords.length > 0) {
         const activeChild =
           nbfcRecords.find(
@@ -695,11 +705,20 @@ app.get('/api/enrollment/:token/nbfc-status', async (req, res) => {
     const journey = mapSalesforceToJourney(record, token);
     const normalized = normalizeNbfcStatus(record as any);
 
-    // Query related NBFC_Onboarding__c records using SOQL (SOQL query 1 & 2)
-    const nbfcChildRecords = await salesforceRestClient.getNbfcRecordsForLearner(
-      record.Id,
-      record.PHONE_NUMBER__c || record.Student_WhatsApp_Number__c || record.Student_Number__c
-    );
+    // Query related child NBFC records (Supabase DB or Salesforce REST API)
+    let nbfcChildRecords: any[] = [];
+    if (supabaseAdapter.ready) {
+      nbfcChildRecords = await supabaseAdapter.getNbfcRecordsForLearner(
+        record.Id,
+        record.PHONE_NUMBER__c || record.Student_WhatsApp_Number__c || record.Student_Number__c
+      );
+    }
+    if (!nbfcChildRecords || nbfcChildRecords.length === 0) {
+      nbfcChildRecords = await salesforceRestClient.getNbfcRecordsForLearner(
+        record.Id,
+        record.PHONE_NUMBER__c || record.Student_WhatsApp_Number__c || record.Student_Number__c
+      );
+    }
 
     const allNbfcs = nbfcChildRecords.map((c: any) => {
       const facilityAmountVal = c.Master_Applied_Loan_Amount__c || c.Master_Approved_Loan_Amount__c || '0';
