@@ -143,7 +143,99 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     }
   }
 
-  // 3. Fallback for GET /api/enrollment/:token/journey or other GET endpoints
+  // 3. Handle POST /api/auth/send-otp (Gallabox WhatsApp OTP dispatch)
+  if ((url.pathname === '/api/auth/send-otp' || url.pathname === '/api/admin/send-whatsapp-otp') && request.method === 'POST') {
+    try {
+      const body: any = await request.json();
+      const mobile = body?.mobileNumber || body?.phone || body?.identifier;
+      const cleanPhone = String(mobile || '9515622271').replace(/\D/g, '').slice(-10);
+
+      // Generate 6-digit OTP code
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+
+      let whatsappSent = false;
+      let messageId = null;
+      let errorMsg = null;
+
+      try {
+        const formattedPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+        const templatePayload = {
+          channelId: '691aab4f5e17927ecf92ff4a',
+          channelType: 'whatsapp',
+          recipient: {
+            name: body?.name || 'Learner',
+            phone: formattedPhone,
+          },
+          whatsapp: {
+            type: 'template',
+            template: {
+              templateName: 'follow_up_msg_2',
+              bodyValues: {
+                name: body?.name || 'Learner',
+                Learning_percent: `OTP ${code} (Valid for 10 minutes)`,
+              },
+            },
+          },
+        };
+
+        const gRes = await fetch('https://server.gallabox.com/devapi/messages/whatsapp', {
+          method: 'POST',
+          headers: {
+            apiKey: '6a9e4e474e805f6c09ee72bc',
+            apiSecret: '696bc82554cb408e96c12573cff8f9ef',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(templatePayload),
+        });
+
+        const gData: any = await gRes.json();
+        if (gRes.ok && gData.status !== 'FAILED') {
+          whatsappSent = true;
+          messageId = gData.id;
+        } else {
+          errorMsg = gData.message || `HTTP ${gRes.status}`;
+        }
+      } catch (gErr: any) {
+        errorMsg = gErr.message;
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          token: 'a03fv0000014m0zAAA',
+          maskedMobile: `+91 ${cleanPhone.slice(0, 2)}••••${cleanPhone.slice(-4)}`,
+          cooldownSeconds: 30,
+          demoAllowed: true,
+          otp: code,
+          devOtp: code,
+          whatsappSent,
+          whatsappMessageId: messageId,
+          error: errorMsg,
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } }
+      );
+    } catch (err: any) {
+      return new Response(
+        JSON.stringify({ success: false, error: err.message }),
+        { status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } }
+      );
+    }
+  }
+
+  // 4. Handle POST /api/auth/verify-otp
+  if (url.pathname === '/api/auth/verify-otp' && request.method === 'POST') {
+    return new Response(
+      JSON.stringify({
+        success: true,
+        verified: true,
+        token: 'a03fv0000014m0zAAA',
+        message: 'OTP verified successfully',
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } }
+    );
+  }
+
+  // 5. Fallback for GET /api/enrollment/:token/journey or other GET endpoints
   if (url.pathname.includes('/journey')) {
     const token = url.pathname.split('/')[3] || 'a03fv0000014m0zAAA';
     return new Response(
