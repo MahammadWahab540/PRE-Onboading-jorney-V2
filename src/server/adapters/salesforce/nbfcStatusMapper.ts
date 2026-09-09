@@ -18,7 +18,7 @@ export interface MappedNbfcResult {
  * Maps heterogeneous lender stages into canonical NbfcStatus.
  */
 export function mapNbfcStatus(record: SalesforceOnboardingRecord): MappedNbfcResult {
-  const lender = record.Choose_NBFC_PRE__c || 'Northern Arc';
+  const lender = (record.Disbursed_NBFC_Name__c || record.Choose_NBFC_PRE__c || '').trim();
 
   let canonicalStatus: NbfcStatus = 'APPLICATION_CREATED';
   let label = 'Application Created';

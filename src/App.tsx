@@ -46,7 +46,8 @@ const initialEnrollmentState: EnrollmentState = {
   emi: {
     selected: false,
     amount: 0,
-    tenure: '6 Months',
+    tenure: null,
+    preferredTenureMonths: null,
   },
   coApplicant: {
     exists: false,
@@ -58,13 +59,7 @@ const initialEnrollmentState: EnrollmentState = {
     status: 'NOT_STARTED',
     appointment: null,
   },
-  financing: {
-    applicationId: '',
-    lenderName: '',
-    status: 'NOT_STARTED',
-    appliedAmount: 0,
-    approvedAmount: 0,
-  },
+  financing: undefined,
   isAuthenticated: false,
 };
 
@@ -196,18 +191,34 @@ export default function App() {
       program: {
         ...prev.program,
         name: journey.program?.name ?? prev.program?.name ?? 'NxtWave Program',
-        price: journey.program?.amountPayable ?? prev.program?.price ?? 112000,
-        amountPayable: journey.program?.amountPayable ?? prev.program?.amountPayable ?? 112000,
+        price:
+          journey.financing?.productPrice ??
+          journey.program?.totalProgramPrice ??
+          journey.program?.baseFee ??
+          prev.program?.price ??
+          0,
+        amountPayable:
+          journey.financing?.totalAmountPayable ??
+          journey.program?.amountPayable ??
+          prev.program?.amountPayable ??
+          0,
+        baseFee: journey.program?.baseFee ?? prev.program?.baseFee,
+        scholarshipAmount: journey.program?.scholarshipAmount ?? prev.program?.scholarshipAmount,
+        seatReservationPaid: journey.program?.seatReservationPaid ?? prev.program?.seatReservationPaid,
       },
       payment: {
         ...prev.payment,
         status: journey.payment?.status ?? prev.payment?.status ?? 'NOT_STARTED',
         amountPaid: journey.payment?.amountPaid ?? prev.payment?.amountPaid ?? 0,
         receiptId: journey.payment?.receiptId ?? prev.payment?.receiptId,
-        selectedMethod:
-          journey.financing && journey.financing.status !== 'NOT_STARTED'
-            ? 'NO_COST_EMI'
-            : prev.payment?.selectedMethod ?? 'FULL_PAYMENT',
+        selectedMethod: journey.payment?.method ?? prev.payment?.selectedMethod ?? null,
+      },
+      emi: {
+        ...prev.emi,
+        amount: journey.financing?.remainingAmount ?? prev.emi.amount,
+        tenure: journey.financing?.totalTenureMonths
+          ? `${journey.financing.totalTenureMonths} Months`
+          : null,
       },
       coApplicant: {
         exists: !!(journey.coApplicant?.name || journey.financing?.coApplicantName),
@@ -219,14 +230,16 @@ export default function App() {
         status: journey.kyc?.status ?? prev.kyc?.status ?? 'NOT_STARTED',
         appointment: null,
       },
-      financing: {
-        applicationId: journey.financing?.applicationId || 'N/A',
-        lenderName: journey.financing?.lenderName || journey.financing?.nbfcName || 'Northern Arc',
-        status: journey.financing?.status || 'NOT_STARTED',
-        appliedAmount: journey.financing?.appliedAmount || 0,
-        approvedAmount: journey.financing?.approvedAmount || 0,
-        rejectionReason: journey.financing?.rejectionReason,
-      },
+      financing: journey.financing
+        ? {
+            ...journey.financing,
+            preferredTenureMonths:
+              journey.financing.preferredTenureMonths ??
+              prev.financing?.preferredTenureMonths ??
+              prev.emi.preferredTenureMonths ??
+              null,
+          }
+        : prev.financing,
     }));
   }, []);
 
@@ -421,6 +434,21 @@ export default function App() {
     }
   };
 
+  // TODO(BUSINESS): Confirm a Salesforce field that explicitly stores learner-requested tenure.
+  // Until then this remains client-side only and must never be written to Total_Tenure_PRE__c.
+  const handlePreferredTenureChange = (months: number) => {
+    setState((prev) => ({
+      ...prev,
+      emi: {
+        ...prev.emi,
+        preferredTenureMonths: months,
+      },
+      financing: prev.financing
+        ? { ...prev.financing, preferredTenureMonths: months }
+        : prev.financing,
+    }));
+  };
+
   const handlePaymentSuccess = (
     receiptId: string,
     amount: number,
@@ -610,6 +638,7 @@ export default function App() {
             >
               <WhyNoCostEmiPage
                 state={state}
+                onPreferredTenureChange={handlePreferredTenureChange}
                 onContinue={() => navigateTo('co-applicant')}
                 onBack={() => navigateTo('payment')}
               />

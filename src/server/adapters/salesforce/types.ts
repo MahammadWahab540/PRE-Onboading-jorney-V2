@@ -53,7 +53,7 @@ export interface SalesforceOnboardingRecord {
   // Financing / NBFC
   Applied_Loan_Amount__c?: number;
   EMI_Tenure_PRE__c?: string;
-  Total_Tenure_PRE__c?: number;
+  Total_Tenure_PRE__c?: number | null;
   Eligible_NBFCs_PRE__c?: string;
   Choose_NBFC_PRE__c?: 'Northern Arc' | 'Fibe' | 'Finz' | 'Gyandhan' | 'Jodo' | string;
   Effective_Approved_Amount__c?: number;

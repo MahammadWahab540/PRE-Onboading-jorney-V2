@@ -154,12 +154,24 @@ export interface KycDetails {
 
 export interface FinancingDetails {
   applied: boolean;
-  appliedAmount: number;
+  appliedAmount?: number;
   nbfcName?: string;
   lenderName?: string;
   applicationId?: string;
   status: NbfcStatus;
   statusLabel: string;
+
+  // Salesforce-driven learner financing amounts. Unknown values stay undefined/null.
+  productPrice?: number;
+  totalAmountPayable?: number;
+  amountPaid?: number;
+  remainingAmount?: number;
+  amountToReceive?: number;
+  totalTenureMonths?: number | null;
+  estimatedMonthlyAmount?: number | null;
+  preferredTenureMonths?: number | null;
+
+  // Existing NBFC lifecycle fields retained for downstream status/class-access flows.
   approvedAmount?: number;
   approvedTenure?: string;
   emiAmountMonthly?: number;

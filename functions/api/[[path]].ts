@@ -5,6 +5,13 @@ interface Env {
   SUPABASE_SERVICE_ROLE_KEY?: string;
 }
 
+interface PagesFunctionContext<TEnv> {
+  request: Request;
+  env: TEnv;
+}
+
+type PagesFunction<TEnv> = (context: PagesFunctionContext<TEnv>) => Response | Promise<Response>;
+
 export const onRequest: PagesFunction<Env> = async (context) => {
   const { request, env } = context;
   const url = new URL(request.url);

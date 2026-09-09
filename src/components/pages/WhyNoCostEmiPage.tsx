@@ -18,6 +18,7 @@ import type { EnrollmentState } from '../../types';
 
 interface WhyNoCostEmiPageProps {
   state: EnrollmentState;
+  onPreferredTenureChange: (months: number) => void;
   onContinue: () => void;
   onBack: () => void;
 }
@@ -96,6 +97,21 @@ const EMI_SUBTITLE_CUES: EmiSubtitleCue[] = [
   },
 ];
 
+const TENURE_OPTIONS = [
+  { months: 12 },
+  {
+    months: 18,
+    recommended: true,
+    estimatedSavings: { min: 5000, max: 10000 },
+  },
+  { months: 24 },
+] as const;
+
+function formatCurrency(value?: number | null): string | null {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) return null;
+  return `₹${Math.round(value).toLocaleString('en-IN')}`;
+}
+
 function formatTime(seconds: number): string {
   const mins = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);
@@ -104,6 +120,7 @@ function formatTime(seconds: number): string {
 
 export const WhyNoCostEmiPage: React.FC<WhyNoCostEmiPageProps> = ({
   state,
+  onPreferredTenureChange,
   onContinue,
   onBack,
 }) => {
@@ -216,6 +233,46 @@ export const WhyNoCostEmiPage: React.FC<WhyNoCostEmiPageProps> = ({
     language === 'te'
       ? '/videos/nxtwave_emi_explainer_te.mp4'
       : '/videos/nxtwave_emi_explainer.mp4';
+
+  const financing = state.financing || state.canonicalJourney?.financing;
+  const productPrice =
+    financing?.productPrice ?? (state.program.price > 0 ? state.program.price : undefined);
+  const totalAmountPayable =
+    financing?.totalAmountPayable ??
+    (state.program.amountPayable > 0 ? state.program.amountPayable : undefined);
+  const amountPaid = financing?.amountPaid ?? state.payment.amountPaid ?? 0;
+  const remainingAmount =
+    typeof financing?.remainingAmount === 'number' &&
+    Number.isFinite(financing.remainingAmount) &&
+    financing.remainingAmount >= 0
+      ? financing.remainingAmount
+      : undefined;
+  const totalTenureMonths =
+    typeof financing?.totalTenureMonths === 'number' &&
+    Number.isFinite(financing.totalTenureMonths) &&
+    financing.totalTenureMonths > 0
+      ? Math.round(financing.totalTenureMonths)
+      : null;
+  const estimatedMonthlyAmount =
+    totalTenureMonths && remainingAmount !== undefined && remainingAmount > 0
+      ? financing?.estimatedMonthlyAmount ?? Math.round(remainingAmount / totalTenureMonths)
+      : null;
+  const preferredTenureMonths =
+    financing?.preferredTenureMonths ?? state.emi.preferredTenureMonths ?? null;
+  const nbfcHasConfirmedApproval = [
+    'APPROVED',
+    'EMI_SETUP_PENDING',
+    'EMI_SETUP_COMPLETED',
+    'DISBURSEMENT_PENDING',
+    'DISBURSED',
+  ].includes(financing?.status || '');
+  const illustrativeTenureOptions =
+    remainingAmount !== undefined && remainingAmount > 0 && !totalTenureMonths
+      ? TENURE_OPTIONS.map((option) => ({
+          ...option,
+          estimatedMonthlyAmount: Math.round(remainingAmount / option.months),
+        }))
+      : [];
 
   return (
     <div className="w-full max-w-xl mx-auto px-4 py-4 sm:py-6">
@@ -441,22 +498,117 @@ export const WhyNoCostEmiPage: React.FC<WhyNoCostEmiPageProps> = ({
           </div>
         </div>
 
-        {/* TRANSPARENT FINANCING & REGULATORY COMPLIANCE DISCLOSURE */}
-        <div className="w-full mt-6 p-4 rounded-xl bg-slate-50 border border-slate-200/90 text-left text-xs space-y-2">
+        {/* SALESFORCE-DRIVEN LEARNER FINANCING DETAILS */}
+        <div className="w-full mt-6 rounded-2xl border border-blue-100 bg-blue-50/40 p-4 sm:p-5 text-left">
+          <div className="mb-4">
+            <p className="text-xs font-bold uppercase tracking-wider text-[#0B63E5]">Your financing details</p>
+            <p className="text-xs text-slate-500 mt-1">Amounts below reflect the latest financing information available for your enrollment.</p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {[
+              ['Original Program Fee', productPrice],
+              ['Total Amount Payable', totalAmountPayable],
+              ['Amount Paid So Far', amountPaid],
+            ].map(([label, value]) => (
+              <div key={String(label)} className="rounded-xl bg-white border border-slate-200 p-3">
+                <span className="text-[11px] font-semibold text-slate-500 block">{label}</span>
+                <span className="text-base font-bold text-[#0A192F] mt-1 block">
+                  {formatCurrency(value as number | undefined) || 'Being updated'}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-3 rounded-xl bg-white border-2 border-blue-200 p-4">
+            <span className="text-xs font-semibold text-slate-600 block">Remaining Amount</span>
+            {remainingAmount === undefined ? (
+              <p className="text-sm font-semibold text-slate-700 mt-1">Financing amount is being updated.</p>
+            ) : remainingAmount === 0 ? (
+              <p className="text-lg font-bold text-[#0A192F] mt-1">No outstanding amount</p>
+            ) : (
+              <p className="text-2xl sm:text-3xl font-bold text-[#0B63E5] mt-1">{formatCurrency(remainingAmount)}</p>
+            )}
+          </div>
+
+          {remainingAmount !== undefined && remainingAmount > 0 && totalTenureMonths && (
+            <div className="mt-4 rounded-xl bg-white border border-slate-200 p-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <span className="text-[11px] font-semibold text-slate-500 block">
+                    {nbfcHasConfirmedApproval ? 'Confirmed Repayment Tenure' : 'Repayment Tenure'}
+                  </span>
+                  <span className="text-xl font-bold text-[#0A192F] mt-1 block">{totalTenureMonths} months</span>
+                </div>
+                <div>
+                  <span className="text-[11px] font-semibold text-slate-500 block">Estimated Monthly Amount</span>
+                  <span className="text-xl font-bold text-[#0A192F] mt-1 block">
+                    {estimatedMonthlyAmount ? `~${formatCurrency(estimatedMonthlyAmount)}/month` : 'Being updated'}
+                  </span>
+                </div>
+              </div>
+              <p className="text-xs text-slate-500 mt-3">
+                Repayment terms are based on the financing information currently available for this application.
+              </p>
+            </div>
+          )}
+
+          {illustrativeTenureOptions.length > 0 && (
+            <div className="mt-4">
+              <div className="mb-3">
+                <h2 className="text-sm font-bold text-[#0A192F]">Choose your preferred tenure</h2>
+                <p className="text-xs text-slate-500 mt-1">Illustrative monthly amounts are calculated from your remaining amount.</p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {illustrativeTenureOptions.map((option) => {
+                  const isSelected = preferredTenureMonths === option.months;
+                  return (
+                    <button
+                      key={option.months}
+                      type="button"
+                      onClick={() => onPreferredTenureChange(option.months)}
+                      className={`relative rounded-xl border p-3 text-left transition-all cursor-pointer ${
+                        isSelected
+                          ? 'border-[#0B63E5] bg-blue-50 ring-1 ring-[#0B63E5]'
+                          : 'border-slate-200 bg-white hover:border-blue-200'
+                      }`}
+                    >
+                      {'recommended' in option && option.recommended && (
+                        <span className="inline-flex mb-2 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 border border-emerald-200">
+                          Recommended
+                        </span>
+                      )}
+                      <span className="block text-sm font-bold text-[#0A192F]">{option.months} months</span>
+                      <span className="block text-xs font-semibold text-slate-600 mt-1">
+                        ~{formatCurrency(option.estimatedMonthlyAmount)}/month
+                      </span>
+                      {'estimatedSavings' in option && option.estimatedSavings && (
+                        <span className="block text-[11px] font-semibold text-emerald-700 mt-2">
+                          Estimated savings {formatCurrency(option.estimatedSavings.min)}–{formatCurrency(option.estimatedSavings.max)}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5">
+                <p className="text-[11px] leading-relaxed text-amber-900">
+                  Your selected tenure is a preference. Final tenure, monthly repayment amount, applicable savings and financing approval will be confirmed by the financing partner.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="w-full mt-4 p-4 rounded-xl bg-slate-50 border border-slate-200/90 text-left text-xs space-y-2">
           <div className="flex items-center gap-2 font-bold text-slate-800">
             <span className="w-2 h-2 rounded-full bg-blue-500" />
             <span>Key Financing Facts & Eligibility</span>
           </div>
           <ul className="space-y-1.5 text-slate-600 pl-4 list-disc">
-            <li>
-              <strong>Zero Extra Interest:</strong> You only pay the net course fee of ₹1,12,000 divided into 6 equal monthly installments (~₹18,667/mo).
-            </li>
-            <li>
-              <strong>Independent NBFC Evaluation:</strong> Applications are evaluated by RBI-registered partner NBFCs (Northern Arc, Fibe) based on credit bureau score and banking records.
-            </li>
-            <li>
-              <strong>Credit Profile Dependent:</strong> Final approval and disbursement are subject to NBFC underwriting criteria and document verification.
-            </li>
+            <li><strong>Independent Evaluation:</strong> Your application is evaluated by an RBI-registered financing partner based on its underwriting criteria.</li>
+            <li><strong>Final Terms:</strong> Tenure, repayment amount, approval and disbursement are subject to verification by the financing partner.</li>
+            <li><strong>Co-Applicant:</strong> A suitable earning co-applicant may be required as part of the financing assessment.</li>
           </ul>
         </div>
 

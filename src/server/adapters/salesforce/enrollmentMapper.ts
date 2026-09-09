@@ -139,18 +139,61 @@ export function mapSalesforceToJourney(
       ? learnerName.split(' ')[0] || 'Learner'
       : 'Learner';
 
-  const baseFee = record.Product_Price__c || 180000;
+  const toNonNegativeAmount = (value?: number | null): number | undefined =>
+    typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : undefined;
+
+  const sourceProductPrice = toNonNegativeAmount(record.Product_Price__c);
+  const sourceTotalAmountPayable =
+    toNonNegativeAmount(record.Total_Amount_to_be_Paid__c) ??
+    toNonNegativeAmount(record.Amount_Payable_PRE__c);
+  const sourceAmountPaid = toNonNegativeAmount(record.Amount_Paid_Till_Now_To_Nxtwave_PRE__c);
+  const sourceRemainingAmount = toNonNegativeAmount(record.Remaining_Amount_To_Be_Paid_PRE__c);
+
+  const productPrice = sourceProductPrice ?? 0;
+  const totalAmountPayable = sourceTotalAmountPayable ?? 0;
+  const amountPaid = sourceAmountPaid ?? 0;
+  const calculatedRemainingAmount =
+    sourceTotalAmountPayable !== undefined
+      ? Math.max(0, totalAmountPayable - amountPaid)
+      : undefined;
+  const remainingAmount = sourceRemainingAmount ?? calculatedRemainingAmount;
+  const amountToReceive =
+    toNonNegativeAmount(record.Amount_to_be_Receive__c) ?? sourceTotalAmountPayable;
+  const totalTenureMonths =
+    typeof record.Total_Tenure_PRE__c === 'number' &&
+    Number.isFinite(record.Total_Tenure_PRE__c) &&
+    record.Total_Tenure_PRE__c > 0
+      ? Math.round(record.Total_Tenure_PRE__c)
+      : null;
+  const estimatedMonthlyAmount =
+    totalTenureMonths && remainingAmount !== undefined && remainingAmount > 0
+      ? Math.round(remainingAmount / totalTenureMonths)
+      : null;
+
+  if (
+    process.env.NODE_ENV !== 'production' &&
+    sourceRemainingAmount !== undefined &&
+    calculatedRemainingAmount !== undefined &&
+    Math.abs(sourceRemainingAmount - calculatedRemainingAmount) > 1
+  ) {
+    console.warn('[EnrollmentFinance] Salesforce remaining amount differs from calculated remaining amount; using Salesforce value.', {
+      recordId: record.Id,
+      salesforceRemainingAmount: sourceRemainingAmount,
+      calculatedRemainingAmount,
+    });
+  }
+
+  const baseFee = productPrice;
   const scholarshipAmount =
     record.Scholarship_Amount__c || record.Merit_Scholarship_Amount_PRE__c || record.Payment_Plan_Discount__c || 0;
-  const seatReservationPaid = record.Seat_Reservation_Amount_Paid__c || record.Total_Amount_PRE__c || 0;
-  const amountPayable =
-    record.Amount_Payable_PRE__c || record.Remaining_Amount_To_Be_Paid_PRE__c || Math.max(0, baseFee - scholarshipAmount - seatReservationPaid);
+  const seatReservationPaid = toNonNegativeAmount(record.Seat_Reservation_Amount_Paid__c) ?? 0;
+  const amountPayable = totalAmountPayable;
 
   const paymentMethod = mapPaymentMethod(record.Payment_Plan_PRE__c);
   const paymentStatus = mapPaymentStatus(
     record.Payment_Status__c || record.Current_Payment_Status__c,
     record.Payment_Done_PRE__c,
-    record.Amount_Paid_Till_Now_To_Nxtwave_PRE__c,
+    amountPaid,
     amountPayable
   );
 
@@ -195,24 +238,41 @@ export function mapSalesforceToJourney(
     },
   };
 
-  // Financing / NBFC mapping
+  // Financing / NBFC mapping. Salesforce remains authoritative for amounts and confirmed tenure.
   let financing;
   if (paymentMethod === 'NO_COST_EMI' || record.Applied_Loan_Amount__c) {
     const mappedNbfc = mapNbfcStatus(record);
-    const tenureMonths = 6;
-    const emiMonthly = Math.round(amountPayable / tenureMonths);
+    const appliedAmount = toNonNegativeAmount(record.Applied_Loan_Amount__c);
+    const approvedAmount = toNonNegativeAmount(record.Effective_Approved_Amount__c);
+    const confirmedTenureLabel = totalTenureMonths ? `${totalTenureMonths} Months` : undefined;
+    const approvedOrLater = [
+      'APPROVED',
+      'EMI_SETUP_PENDING',
+      'EMI_SETUP_COMPLETED',
+      'DISBURSEMENT_PENDING',
+      'DISBURSED',
+    ].includes(mappedNbfc.status);
 
     financing = {
       applied: true,
-      appliedAmount: record.Applied_Loan_Amount__c || amountPayable,
-      nbfcName: mappedNbfc.lenderName,
-      applicationId: `NBFC-${record.Id.slice(-6).toUpperCase()}`,
+      appliedAmount,
+      nbfcName: mappedNbfc.lenderName || undefined,
+      lenderName: mappedNbfc.lenderName || undefined,
+      applicationId: record.NBFC_Application_ID_PRE__c || undefined,
       status: mappedNbfc.status,
       statusLabel: mappedNbfc.statusLabel,
-      approvedAmount: record.Effective_Approved_Amount__c || amountPayable,
-      approvedTenure: `${tenureMonths} Months`,
-      emiAmountMonthly: emiMonthly,
-      emiTenure: record.EMI_Tenure_PRE__c || `${tenureMonths} Months`,
+      productPrice: sourceProductPrice,
+      totalAmountPayable: sourceTotalAmountPayable,
+      amountPaid,
+      remainingAmount,
+      amountToReceive,
+      totalTenureMonths,
+      estimatedMonthlyAmount,
+      preferredTenureMonths: null,
+      approvedAmount,
+      approvedTenure: approvedOrLater ? confirmedTenureLabel : undefined,
+      emiAmountMonthly: estimatedMonthlyAmount ?? undefined,
+      emiTenure: confirmedTenureLabel,
       disbursedAmount: record.Disbursed_Amount_PRE__c,
       disbursedAt: record.Disbursed_Date_Time__c,
       rejectionReason: mappedNbfc.rejectionReason,

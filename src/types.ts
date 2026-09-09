@@ -11,6 +11,7 @@ import type {
   KycStatus,
   PortalRoute as CanonicalPortalRoute,
   EnrollmentJourney,
+  FinancingDetails,
 } from './types/journey';
 
 // Backward compatibility types
@@ -46,6 +47,7 @@ export interface EmiState {
   selected: boolean;
   amount: number;
   tenure: string | null;
+  preferredTenureMonths?: number | null;
 }
 
 export interface CoApplicantState {
@@ -96,7 +98,7 @@ export interface EnrollmentState {
   emi: EmiState;
   coApplicant: CoApplicantState;
   kyc: KycState;
-  financing?: any;
+  financing?: FinancingDetails;
   isAuthenticated: boolean;
   canonicalJourney?: EnrollmentJourney;
 }
