@@ -1,4 +1,5 @@
 import assert from 'node:assert';
+import { readFileSync } from 'node:fs';
 import { MOCK_SALESFORCE_FIXTURES } from '../src/server/adapters/salesforce/mockFixtures';
 import { mapSalesforceToJourney } from '../src/server/adapters/salesforce/enrollmentMapper';
 import { mapNbfcStatus } from '../src/server/adapters/salesforce/nbfcStatusMapper';
@@ -234,4 +235,117 @@ console.log('--- RUNNING ORCHESTRATOR & FIXTURE RESOLUTION TESTS ---');
   console.log('✓ 18. Case and whitespace variations for KYC Submitted passed');
 }
 
-console.log('ALL 18 SUITES PASSED CLEANLY! ✨');
+const financingBaseRecord = {
+  ...MOCK_SALESFORCE_FIXTURES.nw_emi_started_no_coapplicant,
+  Id: 'a03finance000000001',
+  Product_Price__c: 130000,
+  Total_Amount_to_be_Paid__c: 105000,
+  Amount_Payable_PRE__c: 105000,
+  Amount_Paid_Till_Now_To_Nxtwave_PRE__c: 18000,
+  Remaining_Amount_To_Be_Paid_PRE__c: 87000,
+  Amount_to_be_Receive__c: 105000,
+  Payment_Plan_PRE__c: 'No-Cost EMI',
+  Authentication_Verified__c: true,
+};
+
+// 19. Scenario A: Salesforce tenure is authoritative and monthly estimate uses remaining amount.
+{
+  const journey = mapSalesforceToJourney(
+    { ...financingBaseRecord, Total_Tenure_PRE__c: 36 } as any,
+    'finance-scenario-a'
+  );
+
+  assert.strictEqual(journey.financing?.productPrice, 130000);
+  assert.strictEqual(journey.financing?.totalAmountPayable, 105000);
+  assert.strictEqual(journey.financing?.amountPaid, 18000);
+  assert.strictEqual(journey.financing?.remainingAmount, 87000);
+  assert.strictEqual(journey.financing?.amountToReceive, 105000);
+  assert.strictEqual(journey.financing?.totalTenureMonths, 36);
+  assert.strictEqual(journey.financing?.estimatedMonthlyAmount, 2417);
+  assert.strictEqual(journey.program.totalProgramPrice, 130000);
+  assert.strictEqual(journey.program.amountPayable, 105000);
+  console.log('✓ 19. Scenario A financing mapping passed');
+}
+
+// 20. Scenario B: Missing tenure stays unknown; no fake EMI is calculated.
+{
+  const journey = mapSalesforceToJourney(
+    { ...financingBaseRecord, Total_Tenure_PRE__c: null } as any,
+    'finance-scenario-b'
+  );
+
+  assert.strictEqual(journey.financing?.totalTenureMonths, null);
+  assert.strictEqual(journey.financing?.estimatedMonthlyAmount, null);
+  console.log('✓ 20. Scenario B missing tenure remains unknown');
+}
+
+// 21. Scenario C: Explicit Salesforce remaining amount of zero is authoritative.
+{
+  const journey = mapSalesforceToJourney(
+    { ...financingBaseRecord, Remaining_Amount_To_Be_Paid_PRE__c: 0, Total_Tenure_PRE__c: 36 } as any,
+    'finance-scenario-c'
+  );
+
+  assert.strictEqual(journey.financing?.remainingAmount, 0);
+  assert.strictEqual(journey.financing?.estimatedMonthlyAmount, null);
+  console.log('✓ 21. Scenario C zero outstanding amount passed');
+}
+
+// 22. Scenario D: Zero/invalid tenure is treated as missing and never divides by zero.
+{
+  const journey = mapSalesforceToJourney(
+    { ...financingBaseRecord, Total_Tenure_PRE__c: 0 } as any,
+    'finance-scenario-d'
+  );
+
+  assert.strictEqual(journey.financing?.totalTenureMonths, null);
+  assert.strictEqual(journey.financing?.estimatedMonthlyAmount, null);
+  assert.ok(Number.isFinite(journey.financing?.remainingAmount ?? 0));
+  console.log('✓ 22. Scenario D invalid tenure passed');
+}
+
+// 23. Scenario E: Salesforce 24-month tenure must win; six-month fallback must never return.
+{
+  const journey = mapSalesforceToJourney(
+    { ...financingBaseRecord, Total_Tenure_PRE__c: 24 } as any,
+    'finance-scenario-e'
+  );
+
+  assert.strictEqual(journey.financing?.totalTenureMonths, 24);
+  assert.strictEqual(journey.financing?.estimatedMonthlyAmount, 3625);
+  assert.notStrictEqual(journey.financing?.totalTenureMonths, 6);
+  console.log('✓ 23. Scenario E Salesforce 24-month tenure passed');
+}
+
+// 24. Salesforce REST query must request the complete financing source-of-truth field set.
+{
+  const source = readFileSync(
+    new URL('../src/server/adapters/salesforce/salesforceRestClient.ts', import.meta.url),
+    'utf8'
+  );
+  const requiredFields = [
+    'Product_Price__c',
+    'Total_Amount_to_be_Paid__c',
+    'Remaining_Amount_To_Be_Paid_PRE__c',
+    'Amount_to_be_Receive__c',
+    'Amount_Paid_Till_Now_To_Nxtwave_PRE__c',
+    'Total_Tenure_PRE__c',
+  ];
+  for (const field of requiredFields) {
+    assert.ok(source.includes(field), `Salesforce query must request ${field}`);
+  }
+  console.log('✓ 24. Salesforce financing field query coverage passed');
+}
+
+// 25. EMI page must not contain the old fixed-six-month or named-lender marketing copy.
+{
+  const source = readFileSync(
+    new URL('../src/components/pages/WhyNoCostEmiPage.tsx', import.meta.url),
+    'utf8'
+  );
+  assert.ok(!source.includes('divided into 6 equal monthly installments'));
+  assert.ok(!source.includes('Northern Arc, Fibe'));
+  console.log('✓ 25. EMI page hardcoded financing copy regression check passed');
+}
+
+console.log('ALL 25 SUITES PASSED CLEANLY! ✨');
