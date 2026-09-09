@@ -25,7 +25,9 @@ jobs:
         run: npm ci
 
       - name: Apply financing implementation
-        run: python scripts/apply_salesforce_financing_patch.py
+        run: |
+          sed -i 's/if new in text:/if new and new in text:/' scripts/apply_salesforce_financing_patch.py
+          python scripts/apply_salesforce_financing_patch.py
 
       - name: Test
         run: npm run test
@@ -45,6 +47,6 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add src functions
           if ! git diff --cached --quiet; then
-            git commit -m "fix: use Salesforce-driven no-cost EMI data"
+            git commit -m "fix: remove normalized financing fallbacks"
             git push origin HEAD:fix/salesforce-driven-no-cost-emi
           fi
