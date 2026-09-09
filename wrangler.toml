@@ -1,9 +1,12 @@
 name = "pre-onboarding-journey"
-compatibility_date = "2026-09-08"
+pages_build_output_dir = "./dist"
+compatibility_date = "2026-09-09"
 compatibility_flags = ["nodejs_compat"]
+send_metrics = false
 
-pages_build_output_dir = "dist"
-
+# Keep only non-secret runtime configuration in source control.
+# Secrets such as Salesforce, Supabase service-role and provider credentials
+# must be configured in Cloudflare Pages for both Preview and Production.
 [vars]
 DATA_SOURCE = "salesforce"
 SUPABASE_URL = "https://jqxmyxuagerayrgvxjwg.supabase.co"

@@ -5,7 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
-    "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
+    "build": "vite build && node scripts/build-server.mjs",
+    "build:pages": "vite build",
+    "verify:pages": "node scripts/verify-cloudflare-pages.mjs",
+    "check:pages": "npm run build:pages && npm run verify:pages",
     "start": "node dist/server.cjs",
     "test": "tsx test/orchestrator.test.ts",
     "lint": "tsc --noEmit"
