@@ -1,3 +1,4 @@
+// Minimal global typings for Cloudflare Pages Functions used by the repository typecheck.
 type PagesFunction<TEnv = unknown> = (context: {
   request: Request;
   env: TEnv;
