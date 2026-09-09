@@ -13,6 +13,7 @@ permissions:
 
 jobs:
   verify-and-deploy:
+    name: Verify Pages build and deploy if configured
     runs-on: ubuntu-latest
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -84,6 +85,7 @@ jobs:
         if: steps.cloudflare-auth.outputs.enabled != 'true'
         run: |
           echo "Build and Functions validation passed."
-          echo "To enable repo-controlled Cloudflare deployment, configure these GitHub repository secrets:"
+          echo "No Cloudflare deployment was attempted because the deployment credentials are not configured in GitHub Secrets."
+          echo "Required secrets:"
           echo "- CLOUDFLARE_API_TOKEN"
           echo "- CLOUDFLARE_ACCOUNT_ID"
