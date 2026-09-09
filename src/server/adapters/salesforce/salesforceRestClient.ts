@@ -141,10 +141,6 @@ export class SalesforceRestClient {
       Stage_PRE__c: raw.Stage_PRE__c || null,
       Preferred_Languages__c: prefLang,
       Latest_Preferred_Language__c: raw.Latest_Preferred_Language__c || prefLang,
-      Amount_Paid_Till_Now_To_Nxtwave_PRE__c:
-        raw.Amount_Paid_Till_Now_To_Nxtwave_PRE__c ?? raw.Total_Amount_PRE__c ?? 0,
-      Seat_Reservation_Amount_Paid__c:
-        raw.Seat_Reservation_Amount_Paid__c ?? raw.Total_Amount_PRE__c ?? 18000,
       Relation_With_The_Co_Applicant_PRE__c:
         raw.Relation_With_The_Co_Applicant_PRE__c || raw.Relation_with_the_Co_Applicant__c,
       Co_Applicant_Occupation_PRE__c:
