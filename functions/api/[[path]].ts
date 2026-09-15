@@ -3,6 +3,145 @@ interface Env {
   SUPABASE_URL?: string;
   SUPABASE_SECRET_KEY?: string;
   SUPABASE_SERVICE_ROLE_KEY?: string;
+  SF_LOGIN_URL?: string;
+  SF_CLIENT_ID?: string;
+  SF_CLIENT_SECRET?: string;
+}
+
+// Salesforce OAuth Token Cache
+let cachedSfToken: { accessToken: string; instanceUrl: string; expiresAt: number } | null = null;
+
+async function getSalesforceAccessToken(env: Env) {
+  if (cachedSfToken && Date.now() < cachedSfToken.expiresAt - 300000) {
+    return cachedSfToken;
+  }
+
+  const loginUrl = env.SF_LOGIN_URL || 'https://computing-ability-6555.my.salesforce.com';
+  const clientId = env.SF_CLIENT_ID || '';
+  const clientSecret = env.SF_CLIENT_SECRET || '';
+
+  if (!clientId || !clientSecret) {
+    throw new Error('Salesforce credentials (SF_CLIENT_ID, SF_CLIENT_SECRET) not set in environment.');
+  }
+
+  const bodyParams = new URLSearchParams({
+    grant_type: 'client_credentials',
+    client_id: clientId,
+    client_secret: clientSecret,
+  });
+
+  const res = await fetch(`${loginUrl}/services/oauth2/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: bodyParams.toString(),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Salesforce OAuth failed: ${res.status} ${errText}`);
+  }
+
+  const data: any = await res.json();
+  cachedSfToken = {
+    accessToken: data.access_token,
+    instanceUrl: data.instance_url,
+    expiresAt: Date.now() + 2 * 60 * 60 * 1000,
+  };
+  return cachedSfToken;
+}
+
+async function querySalesforce(env: Env, soql: string) {
+  const { accessToken, instanceUrl } = await getSalesforceAccessToken(env);
+  const url = `${instanceUrl}/services/data/v60.0/query?q=${encodeURIComponent(soql)}`;
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Salesforce SOQL query failed: ${res.status} ${errText}`);
+  }
+  const data: any = await res.json();
+  return data.records || [];
+}
+
+const ACADEMY_FIELDS = `Id, Name, PHONE_NUMBER__c, Student_Number__c, Student_WhatsApp_Number__c, Parent_Guardian_Phone_Number_PRE__c, Email_PRE__c, Date_of_Birth__c, Gender__c, Program_PRE__c, Program_Registered_UID_PRE__c, userId__c, Product_Price__c, Amount_Payable_PRE__c, Total_Amount_PRE__c, Remaining_Amount_To_Be_Paid_PRE__c, Payment_Plan_Discount__c, Amount_to_be_Receive__c, Payment_Plan_PRE__c, Current_Payment_Status__c, Down_Payment_Done_On_PRE__c, DP_Order_ID_PRE__c, Applied_Loan_Amount__c, Total_Tenure_PRE__c, Eligible_NBFCs_PRE__c, Choose_NBFC_PRE__c, Disbursed_Amount_PRE__c, Disbursed_Date_Time__c, Disbursed_NBFC_Name__c, Total_Disbursed_Loan_Amount__c, NBFC_Status__c, Status_Of_Decision_in_NBFC_PRE__c, Co_Applicant_Name__c, Co_Applicant_Phone_Number_PRE__c, Co_Applicant_Mail_ID_PRE__c, Relation_with_the_Co_Applicant__c, Co_Applicant_Age_PRE__c, Co_Applicant_Employment_Type_PRE__c, Co_applicant_Occupation_PRE__c, Co_Applicant_Monthly_Income_PRE__c, Co_Applicant_s_Monthly_Income_Range_PRE__c, CIBIL_Score_Range_PRE__c, Co_Applicant_State_PRE__c, Co_Applicant_Address_PRE__c, KYC_Submission_Status_PRE__c, KYC_Submission_Date_and_Time_PRE__c, KYC_Submitted__c, Onboarding_Status__c, Remarks_PRE__c, Stage_PRE__c, Preferred_Languages__c, Latest_Preferred_Language__c, CreatedDate, LastModifiedDate`;
+
+function sanitizeAndMapRecord(r: any) {
+  const activeUid = r.userId__c || r.Program_Registered_UID_PRE__c || r.Id;
+  const activeToken = r.Token__c || activeUid;
+
+  const baseFee = r.Product_Price__c || 180000;
+  const scholarshipAmount = r.Payment_Plan_Discount__c ?? r.Scholarship_Amount__c ?? 0;
+  const seatReservationPaid = r.Total_Amount_PRE__c ?? 0;
+  const amountToBeReceived = r.Amount_to_be_Receive__c ?? r.Amount_Payable_PRE__c ?? Math.max(0, baseFee - scholarshipAmount);
+  const remainingAmountPayable = r.Remaining_Amount_To_Be_Paid_PRE__c ?? 32000;
+
+  const sanitizedRec = {
+    ...r,
+    Student_Number__c: '••••••••••',
+    Student_WhatsApp_Number__c: '••••••••••',
+    PHONE_NUMBER__c: '••••••••••',
+    Parent_Guardian_Phone_Number_PRE__c: '••••••••••',
+    Co_Applicant_Phone_Number_PRE__c: '••••••••••',
+    Email_PRE__c: r.Email_PRE__c ? `${r.Email_PRE__c.slice(0, 2)}••••@${r.Email_PRE__c.split('@')[1] || 'nxtwave.in'}` : '••••@nxtwave.in',
+  };
+
+  const journeyObj = {
+    journeyId: r.Id,
+    token: activeToken,
+    authenticated: true,
+    learner: {
+      name: r.Student_Name__c || r.Name || 'Learner',
+      firstName: (r.Name || 'Learner').split(' ')[0],
+      mobileMasked: '••••••••••',
+      emailMasked: sanitizedRec.Email_PRE__c,
+      registrationId: activeUid,
+      preferredLanguage: 'English',
+    },
+    program: {
+      name: r.Program_PRE__c || 'NxtWave Smart Program',
+      code: 'GENIUS_PRE_2026',
+      baseFee,
+      scholarshipAmount,
+      scholarshipType: 'Merit Scholarship',
+      seatReservationPaid,
+      amountPayable: amountToBeReceived,
+      amountToBeReceived,
+      remainingAmountPayable,
+      totalProgramPrice: baseFee,
+      currency: 'INR',
+    },
+    payment: {
+      method: r.Payment_Plan_PRE__c || 'FULL_PAYMENT',
+      status: (r.Total_Amount_PRE__c || 0) > 0 ? 'SUCCESS' : 'PENDING',
+      amountPaid: r.Total_Amount_PRE__c || 0,
+      receiptId: r.DP_Order_ID_PRE__c || r.Receipt_Id__c,
+    },
+    kyc: {
+      status: r.KYC_Submission_Status_PRE__c === 'SUBMITTED' || r.KYC_Submitted__c ? 'SUBMITTED' : 'NOT_STARTED',
+    },
+    financing: {
+      applied: Boolean(r.Applied_Loan_Amount__c || r.Choose_NBFC_PRE__c),
+      appliedAmount: r.Applied_Loan_Amount__c || amountToBeReceived,
+      nbfcName: r.Choose_NBFC_PRE__c || r.Disbursed_NBFC_Name__c || 'Northern Arc',
+      status: r.Disbursed_NBFC_Name__c ? 'DISBURSED' : 'UNDER_REVIEW',
+    },
+    classAccess: {
+      status: r.Onboarding_Status__c === 'Disbursed' ? 'ACTIVE' : 'LOCKED',
+    },
+    journey: {
+      currentStage: 'PROGRAM_REVIEW',
+      nextAction: 'SELECT_PAYMENT',
+      recommendedRoute: 'program',
+      stepIndex: 2,
+    },
+  };
+
+  return {
+    record: sanitizedRec,
+    journey: journeyObj,
+    portalUrl: `/enrollment/${activeToken}`,
+  };
 }
 
 export const onRequest: PagesFunction<Env> = async (context) => {
@@ -49,7 +188,62 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     }
   }
 
-  // 2. Handle POST /api/onboarding/resolve Edge function
+  // 2. Handle GET /api/admin/search?q=...
+  if (url.pathname === '/api/admin/search' && request.method === 'GET') {
+    const q = (url.searchParams.get('q') || '').trim();
+    if (!q) {
+      return new Response(
+        JSON.stringify({ success: true, query: '', total: 0, data: [] }),
+        { status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } }
+      );
+    }
+
+    try {
+      const cleanSearch = q.replace(/'/g, "\\'");
+      const soql = `SELECT ${ACADEMY_FIELDS} FROM Academy_Onboarding_PRE__c WHERE userId__c = '${cleanSearch}' OR Program_Registered_UID_PRE__c = '${cleanSearch}' OR Id = '${cleanSearch}' OR DP_Order_ID_PRE__c = '${cleanSearch}' OR Name LIKE '%${cleanSearch}%' ORDER BY LastModifiedDate DESC LIMIT 30`;
+
+      let records = await querySalesforce(env, soql);
+
+      // Fallback: If no exact SOQL match found by equality, search by LIKE
+      if (!records || records.length === 0) {
+        const fallbackSoql = `SELECT ${ACADEMY_FIELDS} FROM Academy_Onboarding_PRE__c WHERE userId__c LIKE '%${cleanSearch}%' OR Program_Registered_UID_PRE__c LIKE '%${cleanSearch}%' OR Id LIKE '%${cleanSearch}%' ORDER BY LastModifiedDate DESC LIMIT 30`;
+        records = await querySalesforce(env, fallbackSoql);
+      }
+
+      const mapped = records.map(sanitizeAndMapRecord);
+      return new Response(
+        JSON.stringify({ success: true, query: q, total: mapped.length, data: mapped }),
+        { status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } }
+      );
+    } catch (err: any) {
+      console.error('Cloudflare Edge Admin Search Error:', err);
+      return new Response(
+        JSON.stringify({ success: false, error: err.message || 'Salesforce search execution failed' }),
+        { status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } }
+      );
+    }
+  }
+
+  // 3. Handle GET /api/admin/recent
+  if (url.pathname === '/api/admin/recent' && request.method === 'GET') {
+    try {
+      const limit = parseInt(url.searchParams.get('limit') || '25', 10);
+      const soql = `SELECT ${ACADEMY_FIELDS} FROM Academy_Onboarding_PRE__c ORDER BY LastModifiedDate DESC LIMIT ${limit}`;
+      const records = await querySalesforce(env, soql);
+      const mapped = records.map(sanitizeAndMapRecord);
+      return new Response(
+        JSON.stringify({ success: true, total: mapped.length, data: mapped }),
+        { status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } }
+      );
+    } catch (err: any) {
+      return new Response(
+        JSON.stringify({ success: false, error: err.message || 'Failed to load recent records' }),
+        { status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } }
+      );
+    }
+  }
+
+  // 4. Handle POST /api/onboarding/resolve Edge function
   if (url.pathname === '/api/onboarding/resolve' && request.method === 'POST') {
     try {
       const body: any = await request.json();
@@ -143,7 +337,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     }
   }
 
-  // 3. Handle POST /api/auth/send-otp (Gallabox WhatsApp OTP dispatch)
+  // 5. Handle POST /api/auth/send-otp (Gallabox WhatsApp OTP dispatch)
   if ((url.pathname === '/api/auth/send-otp' || url.pathname === '/api/admin/send-whatsapp-otp') && request.method === 'POST') {
     try {
       const body: any = await request.json();
@@ -222,7 +416,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     }
   }
 
-  // 4. Handle POST /api/auth/verify-otp
+  // 6. Handle POST /api/auth/verify-otp
   if (url.pathname === '/api/auth/verify-otp' && request.method === 'POST') {
     return new Response(
       JSON.stringify({
@@ -235,9 +429,24 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     );
   }
 
-  // 5. Fallback for GET /api/enrollment/:token/journey or other GET endpoints
+  // 7. Fallback for GET /api/enrollment/:token/journey
   if (url.pathname.includes('/journey')) {
     const token = url.pathname.split('/')[3] || 'a03fv0000014m0zAAA';
+    try {
+      const cleanToken = token.replace(/'/g, "\\'");
+      const soql = `SELECT ${ACADEMY_FIELDS} FROM Academy_Onboarding_PRE__c WHERE userId__c = '${cleanToken}' OR Program_Registered_UID_PRE__c = '${cleanToken}' OR Id = '${cleanToken}' LIMIT 1`;
+      const records = await querySalesforce(env, soql);
+      if (records && records.length > 0) {
+        const item = sanitizeAndMapRecord(records[0]);
+        return new Response(
+          JSON.stringify({ success: true, journey: item.journey }),
+          { status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } }
+        );
+      }
+    } catch (e) {
+      console.warn('Salesforce journey fetch fallback warning:', e);
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
