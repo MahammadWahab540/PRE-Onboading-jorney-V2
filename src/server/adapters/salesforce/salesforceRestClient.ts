@@ -114,6 +114,7 @@ export class SalesforceRestClient {
     Parent_Guardian_Phone_Number_PRE__c, Email_PRE__c, Date_of_Birth__c, Gender__c,
     Program_PRE__c, Program_Registered_UID_PRE__c, userId__c,
     Product_Price__c, Amount_Payable_PRE__c, Total_Amount_PRE__c, Remaining_Amount_To_Be_Paid_PRE__c,
+    Payment_Plan_Discount__c, Amount_to_be_Receive__c,
     Payment_Plan_PRE__c, Current_Payment_Status__c, Down_Payment_Done_On_PRE__c, DP_Order_ID_PRE__c,
     Applied_Loan_Amount__c, Total_Tenure_PRE__c, Eligible_NBFCs_PRE__c, Choose_NBFC_PRE__c,
     Disbursed_Amount_PRE__c, Disbursed_Date_Time__c, Disbursed_NBFC_Name__c, Total_Disbursed_Loan_Amount__c,
