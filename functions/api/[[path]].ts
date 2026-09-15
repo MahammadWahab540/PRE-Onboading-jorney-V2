@@ -199,13 +199,21 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 
     try {
       const cleanSearch = q.replace(/'/g, "\\'");
-      const soql = `SELECT ${ACADEMY_FIELDS} FROM Academy_Onboarding_PRE__c WHERE userId__c = '${cleanSearch}' OR Program_Registered_UID_PRE__c = '${cleanSearch}' OR Id = '${cleanSearch}' OR DP_Order_ID_PRE__c = '${cleanSearch}' OR Name LIKE '%${cleanSearch}%' ORDER BY LastModifiedDate DESC LIMIT 30`;
+      const isSfId = /^[a-zA-Z0-9]{15,18}$/.test(cleanSearch);
+      const whereClause = isSfId
+        ? `userId__c = '${cleanSearch}' OR Program_Registered_UID_PRE__c = '${cleanSearch}' OR Id = '${cleanSearch}' OR DP_Order_ID_PRE__c = '${cleanSearch}' OR Name LIKE '%${cleanSearch}%'`
+        : `userId__c = '${cleanSearch}' OR Program_Registered_UID_PRE__c = '${cleanSearch}' OR DP_Order_ID_PRE__c = '${cleanSearch}' OR Name LIKE '%${cleanSearch}%'`;
+
+      const soql = `SELECT ${ACADEMY_FIELDS} FROM Academy_Onboarding_PRE__c WHERE ${whereClause} ORDER BY LastModifiedDate DESC LIMIT 30`;
 
       let records = await querySalesforce(env, soql);
 
       // Fallback: If no exact SOQL match found by equality, search by LIKE
       if (!records || records.length === 0) {
-        const fallbackSoql = `SELECT ${ACADEMY_FIELDS} FROM Academy_Onboarding_PRE__c WHERE userId__c LIKE '%${cleanSearch}%' OR Program_Registered_UID_PRE__c LIKE '%${cleanSearch}%' OR Id LIKE '%${cleanSearch}%' ORDER BY LastModifiedDate DESC LIMIT 30`;
+        const fallbackWhere = isSfId
+          ? `userId__c LIKE '%${cleanSearch}%' OR Program_Registered_UID_PRE__c LIKE '%${cleanSearch}%' OR Id LIKE '%${cleanSearch}%'`
+          : `userId__c LIKE '%${cleanSearch}%' OR Program_Registered_UID_PRE__c LIKE '%${cleanSearch}%'`;
+        const fallbackSoql = `SELECT ${ACADEMY_FIELDS} FROM Academy_Onboarding_PRE__c WHERE ${fallbackWhere} ORDER BY LastModifiedDate DESC LIMIT 30`;
         records = await querySalesforce(env, fallbackSoql);
       }
 
@@ -433,7 +441,11 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     const token = url.pathname.split('/')[3] || 'a03fv0000014m0zAAA';
     try {
       const cleanToken = token.replace(/'/g, "\\'");
-      const soql = `SELECT ${ACADEMY_FIELDS} FROM Academy_Onboarding_PRE__c WHERE userId__c = '${cleanToken}' OR Program_Registered_UID_PRE__c = '${cleanToken}' OR Id = '${cleanToken}' LIMIT 1`;
+      const isSfId = /^[a-zA-Z0-9]{15,18}$/.test(cleanToken);
+      const whereClause = isSfId
+        ? `userId__c = '${cleanToken}' OR Program_Registered_UID_PRE__c = '${cleanToken}' OR Id = '${cleanToken}'`
+        : `userId__c = '${cleanToken}' OR Program_Registered_UID_PRE__c = '${cleanToken}'`;
+      const soql = `SELECT ${ACADEMY_FIELDS} FROM Academy_Onboarding_PRE__c WHERE ${whereClause} LIMIT 1`;
       const records = await querySalesforce(env, soql);
       if (records && records.length > 0) {
         const item = sanitizeAndMapRecord(records[0]);
