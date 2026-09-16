@@ -159,6 +159,31 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     });
   }
 
+  // Healthcheck endpoint for smoke-testing runtime status
+  if (url.pathname === '/api/health' || url.pathname === '/health') {
+    return new Response(
+      JSON.stringify({
+        status: 'UP',
+        runtime: 'cloudflare-worker',
+        timestamp: new Date().toISOString(),
+        service: 'pre-onboading-jorney-v2',
+        environment: {
+          dataSource: env.BACKEND_API_URL ? 'proxy' : 'salesforce-edge',
+          salesforceConfigured: Boolean(env.SF_LOGIN_URL || env.SF_CLIENT_ID),
+          supabaseConfigured: Boolean(env.SUPABASE_URL),
+        },
+      }),
+      {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+          'Cache-Control': 'no-store',
+        },
+      }
+    );
+  }
+
   const backendBase = env.BACKEND_API_URL;
 
   // 1. If BACKEND_API_URL environment variable is set, proxy request to backend server
