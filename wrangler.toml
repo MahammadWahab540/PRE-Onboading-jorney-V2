@@ -1,7 +1,9 @@
 name = "pre-onboading-jorney-v2"
 main = "worker.ts"
+pages_build_output_dir = "./dist"
 compatibility_date = "2026-09-08"
 compatibility_flags = ["nodejs_compat"]
+send_metrics = false
 
 [assets]
 directory = "./dist"
