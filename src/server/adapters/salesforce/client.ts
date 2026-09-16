@@ -1,6 +1,7 @@
 import type { SalesforceOnboardingRecord } from './types';
 import { supabaseAdapter } from '../supabase/supabaseAdapter';
 import { salesforceRestClient } from './salesforceRestClient';
+import { MOCK_SALESFORCE_FIXTURES } from './mockFixtures';
 export { salesforceRestClient };
 
 export interface SalesforceClientInterface {
@@ -25,6 +26,13 @@ class SalesforceClient implements SalesforceClientInterface {
   private inMemoryStore: Map<string, SalesforceOnboardingRecord> = new Map();
 
   constructor() {
+    for (const [token, record] of Object.entries(MOCK_SALESFORCE_FIXTURES)) {
+      this.inMemoryStore.set(token, record);
+      if (record.Id) {
+        this.inMemoryStore.set(record.Id, record);
+      }
+    }
+
     console.log(
       `[Data Adapter]\n` +
         `  DATA_SOURCE=${process.env.DATA_SOURCE || 'salesforce'}\n` +

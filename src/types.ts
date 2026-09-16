@@ -32,6 +32,8 @@ export interface ProgramInfo {
   baseFee?: number;
   scholarshipAmount?: number;
   seatReservationPaid?: number;
+  amountToBeReceived?: number;
+  remainingAmountPayable?: number;
 }
 
 export interface PaymentState {

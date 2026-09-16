@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import type { SalesforceOnboardingRecord } from './types';
 import { normalizeIndianPhone, getIndianPhoneSearchVariants } from '../../domain/phoneNormalizer';
 import { selectActiveRecord } from '../../domain/activeRecordResolver';
@@ -12,17 +13,20 @@ interface OAuthTokenResponse {
 }
 
 export class SalesforceRestClient {
-  private loginUrl: string;
-  private clientId: string;
-  private clientSecret: string;
   private accessToken: string | null = null;
   private instanceUrl: string | null = null;
   private tokenExpiresAt: number = 0;
 
-  constructor() {
-    this.loginUrl = process.env.SF_LOGIN_URL || 'https://computing-ability-6555.my.salesforce.com';
-    this.clientId = process.env.SF_CLIENT_ID || '';
-    this.clientSecret = process.env.SF_CLIENT_SECRET || '';
+  public get loginUrl(): string {
+    return process.env.SF_LOGIN_URL || 'https://computing-ability-6555.my.salesforce.com';
+  }
+
+  public get clientId(): string {
+    return process.env.SF_CLIENT_ID || '';
+  }
+
+  public get clientSecret(): string {
+    return process.env.SF_CLIENT_SECRET || '';
   }
 
   public get isConfigured(): boolean {
@@ -52,11 +56,19 @@ export class SalesforceRestClient {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
+          Accept: 'application/json',
         },
         body: bodyParams.toString(),
       });
 
-      const data = (await res.json()) as any;
+      const text = await res.text();
+      let data: any;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        console.error('[Salesforce REST] OAuth response was not JSON:', text.slice(0, 300));
+        return false;
+      }
 
       if (!res.ok) {
         console.error('[Salesforce REST] OAuth authentication failed:', data.error, data.error_description);
@@ -88,20 +100,40 @@ export class SalesforceRestClient {
 
     try {
       const url = `${this.instanceUrl}/services/data/v60.0/query?q=${encodeURIComponent(soql)}`;
-      const res = await fetch(url, {
+      let res = await fetch(url, {
         headers: {
           Authorization: `Bearer ${this.accessToken}`,
           'Content-Type': 'application/json',
         },
       });
 
-      if (!res.ok) {
-        const errorData = await res.json();
-        console.error('[Salesforce REST] SOQL query error:', errorData);
+      if (res.status === 401) {
+        this.accessToken = null;
+        const reAuthed = await this.authenticate();
+        if (reAuthed && this.accessToken) {
+          res = await fetch(url, {
+            headers: {
+              Authorization: `Bearer ${this.accessToken}`,
+              'Content-Type': 'application/json',
+            },
+          });
+        }
+      }
+
+      const text = await res.text();
+      let data: any;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        console.error('[Salesforce REST] SOQL response was not JSON:', text.slice(0, 300));
         return [];
       }
 
-      const data = await res.json();
+      if (!res.ok) {
+        console.error('[Salesforce REST] SOQL query error:', data);
+        return [];
+      }
+
       return data.records || [];
     } catch (err: any) {
       console.error('[Salesforce REST] Query exception:', err.message);
@@ -389,7 +421,17 @@ export class SalesforceRestClient {
     if (clauses.length === 0) return [];
 
     const soql = `
-      SELECT Id, Name, Master_App_ID__c, Master_Applied_Loan_Amount__c, Master_Approved_Loan_Amount__c, student_phone_number__c, Academy_Onboarding_PRE_L__c, Co_Applicant_Name_PRE__c, Co_Applicant_Phone_Number_PRE__c, Relation_With_The_Co_Applicant_PRE__c, CreatedDate, LastModifiedDate
+      SELECT Id, Name, Choose_NBFC_PRE__c, other_NBFC_PRE__c,
+             Northern_Arc_Overall_Stages__c, Northern_Arc_Remarks__c, Northern_Arc_Rejected_Reasons__c,
+             Northern_Arc_Loan_Amount__c, Northern_Arc_Approved_Amount__c,
+             Gyandhan_Overall_Stages__c, Gyandhan_Sub_Status__c, Gyandhan_Remarks__c, Gyandhan_Rejection_Reason__c,
+             Fibe_Overall_Stages__c, Fibe_Overall_Loan_Status__c, Fibe_Remarks__c, Fibe_Rejected_Reasons__c,
+             Auxilo_Overall_Stages__c, Techfino_Overall_Status__c, Bajaj_Overall_Status_Presa__c,
+             NBFC_Stage_of_Reps__c, Application_Status_PRE__c, Post_Approval_Status_Pre__c, Post_Approval_For_NBFC_Pre__c,
+             Master_App_ID__c, Master_Applied_Loan_Amount__c, Master_Approved_Loan_Amount__c,
+             student_phone_number__c, Academy_Onboarding_PRE_L__c,
+             Co_Applicant_Name_PRE__c, Co_Applicant_Phone_Number_PRE__c, Relation_With_The_Co_Applicant_PRE__c,
+             CreatedDate, LastModifiedDate
       FROM NBFC_Onboarding__c
       WHERE ${clauses.join(' OR ')}
       ORDER BY CreatedDate DESC
