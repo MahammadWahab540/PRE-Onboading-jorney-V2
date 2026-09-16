@@ -63,17 +63,43 @@ async function querySalesforce(env: Env, soql: string) {
   return data.records || [];
 }
 
+import { mapSalesforceToJourney } from '../../src/server/adapters/salesforce/enrollmentMapper';
+
+async function updateSalesforceRecord(env: Env, recordId: string, updates: Record<string, any>) {
+  const { accessToken, instanceUrl } = await getSalesforceAccessToken(env);
+  const url = `${instanceUrl}/services/data/v60.0/sobjects/Academy_Onboarding_PRE__c/${recordId}`;
+  const res = await fetch(url, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(updates),
+  });
+  if (!res.ok) {
+    const errText = await res.text();
+    console.error(`Salesforce update failed: ${res.status} ${errText}`);
+    throw new Error(`Salesforce update failed: ${res.status} ${errText}`);
+  }
+  return true;
+}
+
 const ACADEMY_FIELDS = `Id, Name, PHONE_NUMBER__c, Student_Number__c, Student_WhatsApp_Number__c, Parent_Guardian_Phone_Number_PRE__c, Email_PRE__c, Date_of_Birth__c, Gender__c, Program_PRE__c, Program_Registered_UID_PRE__c, userId__c, Product_Price__c, Amount_Payable_PRE__c, Total_Amount_PRE__c, Remaining_Amount_To_Be_Paid_PRE__c, Payment_Plan_Discount__c, Amount_to_be_Receive__c, Payment_Plan_PRE__c, Current_Payment_Status__c, Down_Payment_Done_On_PRE__c, DP_Order_ID_PRE__c, Applied_Loan_Amount__c, Total_Tenure_PRE__c, Eligible_NBFCs_PRE__c, Choose_NBFC_PRE__c, Disbursed_Amount_PRE__c, Disbursed_Date_Time__c, Disbursed_NBFC_Name__c, Total_Disbursed_Loan_Amount__c, NBFC_Status__c, Status_Of_Decision_in_NBFC_PRE__c, Co_Applicant_Name__c, Co_Applicant_Phone_Number_PRE__c, Co_Applicant_Mail_ID_PRE__c, Relation_with_the_Co_Applicant__c, Co_Applicant_Age_PRE__c, Co_Applicant_Employment_Type_PRE__c, Co_applicant_Occupation_PRE__c, Co_Applicant_Monthly_Income_PRE__c, Co_Applicant_s_Monthly_Income_Range_PRE__c, CIBIL_Score_Range_PRE__c, Co_Applicant_State_PRE__c, Co_Applicant_Address_PRE__c, KYC_Submission_Status_PRE__c, KYC_Submission_Date_and_Time_PRE__c, KYC_Submitted__c, Onboarding_Status__c, Remarks_PRE__c, Stage_PRE__c, Preferred_Languages__c, Latest_Preferred_Language__c, CreatedDate, LastModifiedDate`;
+
+async function getSalesforceRecordByToken(env: Env, token: string) {
+  const cleanToken = token.replace(/'/g, "\\'");
+  const isSfId = /^[a-zA-Z0-9]{15,18}$/.test(cleanToken);
+  const whereClause = isSfId
+    ? `userId__c = '${cleanToken}' OR Program_Registered_UID_PRE__c = '${cleanToken}' OR Id = '${cleanToken}'`
+    : `userId__c = '${cleanToken}' OR Program_Registered_UID_PRE__c = '${cleanToken}'`;
+  const soql = `SELECT ${ACADEMY_FIELDS} FROM Academy_Onboarding_PRE__c WHERE ${whereClause} LIMIT 1`;
+  const records = await querySalesforce(env, soql);
+  return records && records.length > 0 ? records[0] : null;
+}
 
 function sanitizeAndMapRecord(r: any) {
   const activeUid = r.userId__c || r.Program_Registered_UID_PRE__c || r.Id;
   const activeToken = r.Token__c || activeUid;
-
-  const baseFee = r.Product_Price__c || 180000;
-  const scholarshipAmount = r.Payment_Plan_Discount__c ?? r.Scholarship_Amount__c ?? 0;
-  const seatReservationPaid = r.Total_Amount_PRE__c ?? 0;
-  const amountToBeReceived = r.Amount_to_be_Receive__c ?? r.Amount_Payable_PRE__c ?? Math.max(0, baseFee - scholarshipAmount);
-  const remainingAmountPayable = r.Remaining_Amount_To_Be_Paid_PRE__c ?? 32000;
 
   const sanitizedRec = {
     ...r,
@@ -85,56 +111,8 @@ function sanitizeAndMapRecord(r: any) {
     Email_PRE__c: r.Email_PRE__c ? `${r.Email_PRE__c.slice(0, 2)}••••@${r.Email_PRE__c.split('@')[1] || 'nxtwave.in'}` : '••••@nxtwave.in',
   };
 
-  const journeyObj = {
-    journeyId: r.Id,
-    token: activeToken,
-    authenticated: true,
-    learner: {
-      name: r.Student_Name__c || r.Name || 'Learner',
-      firstName: (r.Name || 'Learner').split(' ')[0],
-      mobileMasked: '••••••••••',
-      emailMasked: sanitizedRec.Email_PRE__c,
-      registrationId: activeUid,
-      preferredLanguage: 'English',
-    },
-    program: {
-      name: r.Program_PRE__c || 'NxtWave Smart Program',
-      code: 'GENIUS_PRE_2026',
-      baseFee,
-      scholarshipAmount,
-      scholarshipType: 'Merit Scholarship',
-      seatReservationPaid,
-      amountPayable: amountToBeReceived,
-      amountToBeReceived,
-      remainingAmountPayable,
-      totalProgramPrice: baseFee,
-      currency: 'INR',
-    },
-    payment: {
-      method: r.Payment_Plan_PRE__c || 'FULL_PAYMENT',
-      status: (r.Total_Amount_PRE__c || 0) > 0 ? 'SUCCESS' : 'PENDING',
-      amountPaid: r.Total_Amount_PRE__c || 0,
-      receiptId: r.DP_Order_ID_PRE__c || r.Receipt_Id__c,
-    },
-    kyc: {
-      status: r.KYC_Submission_Status_PRE__c === 'SUBMITTED' || r.KYC_Submitted__c ? 'SUBMITTED' : 'NOT_STARTED',
-    },
-    financing: {
-      applied: Boolean(r.Applied_Loan_Amount__c || r.Choose_NBFC_PRE__c),
-      appliedAmount: r.Applied_Loan_Amount__c || amountToBeReceived,
-      nbfcName: r.Choose_NBFC_PRE__c || r.Disbursed_NBFC_Name__c || 'Northern Arc',
-      status: r.Disbursed_NBFC_Name__c ? 'DISBURSED' : 'UNDER_REVIEW',
-    },
-    classAccess: {
-      status: r.Onboarding_Status__c === 'Disbursed' ? 'ACTIVE' : 'LOCKED',
-    },
-    journey: {
-      currentStage: 'PROGRAM_REVIEW',
-      nextAction: 'SELECT_PAYMENT',
-      recommendedRoute: 'program',
-      stepIndex: 2,
-    },
-  };
+  const recWithAuth = { ...r, Authentication_Verified__c: true };
+  const journeyObj = mapSalesforceToJourney(recWithAuth, activeToken);
 
   return {
     record: sanitizedRec,
@@ -461,19 +439,174 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     );
   }
 
-  // 7. Fallback for GET /api/enrollment/:token/journey
-  if (url.pathname.includes('/journey')) {
+  // 7. Handle POST /api/enrollment/:token/stage
+  if (url.pathname.includes('/stage') && request.method === 'POST') {
     const token = url.pathname.split('/')[3] || 'a03fv0000014m0zAAA';
     try {
-      const cleanToken = token.replace(/'/g, "\\'");
-      const isSfId = /^[a-zA-Z0-9]{15,18}$/.test(cleanToken);
-      const whereClause = isSfId
-        ? `userId__c = '${cleanToken}' OR Program_Registered_UID_PRE__c = '${cleanToken}' OR Id = '${cleanToken}'`
-        : `userId__c = '${cleanToken}' OR Program_Registered_UID_PRE__c = '${cleanToken}'`;
-      const soql = `SELECT ${ACADEMY_FIELDS} FROM Academy_Onboarding_PRE__c WHERE ${whereClause} LIMIT 1`;
-      const records = await querySalesforce(env, soql);
-      if (records && records.length > 0) {
-        const item = sanitizeAndMapRecord(records[0]);
+      const body: any = await request.json().catch(() => ({}));
+      const stage = body?.stage;
+      if (!stage || typeof stage !== 'string') {
+        return new Response(JSON.stringify({ error: 'Stage is required' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        });
+      }
+
+      const rec = await getSalesforceRecordByToken(env, token);
+      if (rec && rec.Id) {
+        await updateSalesforceRecord(env, rec.Id, { Stage_PRE__c: stage });
+        rec.Stage_PRE__c = stage;
+        rec.Authentication_Verified__c = true;
+        const journey = mapSalesforceToJourney(rec, token);
+        return new Response(
+          JSON.stringify({ success: true, stage, journey }),
+          { status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } }
+        );
+      }
+    } catch (err: any) {
+      console.error('Failed to update stage in Salesforce:', err);
+      return new Response(
+        JSON.stringify({ error: 'Failed to update stage', message: err.message }),
+        { status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } }
+      );
+    }
+  }
+
+  // 8. Handle POST /api/enrollment/:token/kyc/action
+  if (url.pathname.includes('/kyc/action') && request.method === 'POST') {
+    const token = url.pathname.split('/')[3] || 'a03fv0000014m0zAAA';
+    try {
+      const body: any = await request.json().catch(() => ({}));
+      const action = body?.action;
+
+      let updates: Record<string, any> = {};
+      if (action === 'SUBMIT' || action === 'RETRY_DOCUMENTS') {
+        updates = {
+          KYC_Submission_Status_PRE__c: 'SUBMITTED',
+          KYC_Submitted__c: true,
+          KYC_Submission_Date_and_Time_PRE__c: new Date().toISOString(),
+          Onboarding_Status__c: 'KYC Submitted',
+          Stage_PRE__c: 'kyc',
+        };
+      } else if (action === 'COMPLETE' || action === 'VERIFY') {
+        updates = {
+          KYC_Submission_Status_PRE__c: 'VERIFIED',
+          KYC_Submitted__c: true,
+          Onboarding_Status__c: 'Application in NBFC',
+          Stage_PRE__c: 'nbfc-status',
+        };
+      }
+
+      const rec = await getSalesforceRecordByToken(env, token);
+      if (rec && rec.Id) {
+        if (Object.keys(updates).length > 0) {
+          await updateSalesforceRecord(env, rec.Id, updates);
+        }
+        const updatedRec = { ...rec, ...updates, Authentication_Verified__c: true };
+        const journey = mapSalesforceToJourney(updatedRec, token);
+        return new Response(
+          JSON.stringify({ success: true, journey }),
+          { status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } }
+        );
+      }
+    } catch (err: any) {
+      console.error('Failed to process KYC update:', err);
+      return new Response(
+        JSON.stringify({ error: 'Failed to process KYC update', message: err.message }),
+        { status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } }
+      );
+    }
+  }
+
+  // 9. Handle POST /api/enrollment/:token/co-applicant
+  if (url.pathname.includes('/co-applicant') && request.method === 'POST') {
+    const token = url.pathname.split('/')[3] || 'a03fv0000014m0zAAA';
+    try {
+      const body: any = await request.json().catch(() => ({}));
+      const { relation, name, mobile, age, employmentType, monthlyIncomeRange, cibilScoreRange, state, address } = body;
+      if (!relation || !name || !mobile) {
+        return new Response(
+          JSON.stringify({ error: 'Relation, full name, and mobile number are required' }),
+          { status: 400, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } }
+        );
+      }
+
+      const cleanPhone = String(mobile).replace(/\D/g, '');
+      const rec = await getSalesforceRecordByToken(env, token);
+      if (rec && rec.Id) {
+        const updates: Record<string, any> = {
+          Relation_with_the_Co_Applicant__c: relation,
+          Co_Applicant_Name__c: name.trim(),
+          Co_Applicant_Phone_Number_PRE__c: cleanPhone,
+          Co_Applicant_Age_PRE__c: age ? Number(age) : 48,
+          Co_Applicant_Employment_Type_PRE__c: employmentType || 'Salaried',
+          Co_Applicant_s_Monthly_Income_Range_PRE__c: monthlyIncomeRange || '₹50,000 - ₹75,000',
+          CIBIL_Score_Range_PRE__c: cibilScoreRange || '750+',
+          Co_Applicant_State_PRE__c: state || 'Telangana',
+          Co_Applicant_Address_PRE__c: address || '',
+          Stage_PRE__c: 'kyc',
+        };
+        await updateSalesforceRecord(env, rec.Id, updates);
+        const updatedRec = { ...rec, ...updates, Authentication_Verified__c: true };
+        const journey = mapSalesforceToJourney(updatedRec, token);
+        return new Response(
+          JSON.stringify({ success: true, journey }),
+          { status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } }
+        );
+      }
+    } catch (err: any) {
+      return new Response(
+        JSON.stringify({ error: 'Failed to save co-applicant details', message: err.message }),
+        { status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } }
+      );
+    }
+  }
+
+  // 10. Handle POST /api/enrollment/:token/payment-method
+  if (url.pathname.includes('/payment-method') && request.method === 'POST') {
+    const token = url.pathname.split('/')[3] || 'a03fv0000014m0zAAA';
+    try {
+      const body: any = await request.json().catch(() => ({}));
+      const method = body.method || body.paymentMethod;
+      let planString = 'Full Payment';
+      let nextStage = 'pay';
+      if (method === 'CREDIT_CARD') {
+        planString = 'Credit Card';
+        nextStage = 'pay';
+      } else if (method === 'NO_COST_EMI') {
+        planString = 'No-Cost EMI';
+        nextStage = 'emi';
+      }
+
+      const rec = await getSalesforceRecordByToken(env, token);
+      if (rec && rec.Id) {
+        const updates = {
+          Payment_Plan_PRE__c: planString,
+          Stage_PRE__c: nextStage,
+        };
+        await updateSalesforceRecord(env, rec.Id, updates);
+        const updatedRec = { ...rec, ...updates, Authentication_Verified__c: true };
+        const journey = mapSalesforceToJourney(updatedRec, token);
+        return new Response(
+          JSON.stringify({ success: true, journey }),
+          { status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } }
+        );
+      }
+    } catch (err: any) {
+      return new Response(
+        JSON.stringify({ error: 'Failed to save payment method', message: err.message }),
+        { status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } }
+      );
+    }
+  }
+
+  // 11. Handle GET /api/enrollment/:token/journey
+  if (url.pathname.includes('/journey') && request.method === 'GET') {
+    const token = url.pathname.split('/')[3] || 'a03fv0000014m0zAAA';
+    try {
+      const rec = await getSalesforceRecordByToken(env, token);
+      if (rec) {
+        const item = sanitizeAndMapRecord(rec);
         return new Response(
           JSON.stringify({ success: true, journey: item.journey }),
           { status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } }
