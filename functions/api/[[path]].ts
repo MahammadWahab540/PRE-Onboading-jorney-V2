@@ -600,12 +600,236 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     }
   }
 
+function buildCadenceStages(currentStep: number, isEmiDone: boolean, isDisbursed: boolean) {
+  return [
+    {
+      step: 1,
+      name: 'Application & Consent',
+      description: 'Educational EMI application initiated & consent link sent to co-applicant',
+      isCompleted: currentStep > 1 || isEmiDone || isDisbursed,
+      isCurrent: currentStep === 1 && !isEmiDone && !isDisbursed,
+    },
+    {
+      step: 2,
+      name: 'Document & Credit Review',
+      description: 'Lender underwriting team reviews KYC, income details & credit bureau score',
+      isCompleted: currentStep > 2 || isEmiDone || isDisbursed,
+      isCurrent: currentStep === 2 && !isEmiDone && !isDisbursed,
+    },
+    {
+      step: 3,
+      name: 'Sanction & Video KYC',
+      description: 'Loan sanctioned, digital agreement signing & quick Video KYC (if applicable)',
+      isCompleted: currentStep > 3 || isEmiDone || isDisbursed,
+      isCurrent: currentStep === 3 && !isEmiDone && !isDisbursed,
+    },
+    {
+      step: 4,
+      name: 'Auto-Debit (e-NACH) Setup',
+      description: 'Our NBFC partner will connect with you to register monthly auto-debit (0% interest)',
+      isCompleted: isDisbursed,
+      isCurrent: currentStep === 4 || (isEmiDone && !isDisbursed),
+    },
+    {
+      step: 5,
+      name: 'Disbursement & Class Access',
+      description: 'Facility disbursed directly to NxtWave and Genius LMS portal unlocked',
+      isCompleted: isDisbursed,
+      isCurrent: currentStep === 5 && !isDisbursed,
+    },
+  ];
+}
+
+function resolveNorthernArcStage(child: any, parentRec: any) {
+  const northernStage = (child?.Northern_Arc_Overall_Stages__c || '').trim();
+  const otherStage = (child?.other_NBFC_PRE__c || '').trim();
+  const parentStatus = (parentRec?.Onboarding_Status__c || '').trim();
+
+  // Priority: Northern_Arc_Overall_Stages__c -> other_NBFC_PRE__c -> parent Onboarding_Status__c
+  const activeStage = northernStage || otherStage || parentStatus;
+  const lower = activeStage.toLowerCase();
+
+  // Case 1: Disbursed
+  if (lower.includes('disbursed')) {
+    return {
+      statusCode: 'DISBURSED',
+      statusLabel: 'Loan Disbursed - Class Access Unlocked',
+      userMessage: 'Congratulations! Your loan with NORTHERN ARC has been disbursed and class access is unlocked.',
+      guidanceMessage: 'Your Genius LMS portal is active. You can start learning right away!',
+      cadenceStep: 5,
+      classAccessEta: 'Immediate (Active)',
+      isDisbursed: true,
+      isEmiDone: true,
+    };
+  }
+
+  // Case 2: EMI Setup Done
+  if (lower.includes('emi setup done') || lower.includes('mandate success')) {
+    return {
+      statusCode: 'EMI_SETUP_COMPLETED',
+      statusLabel: 'Auto-Debit Configured (Finalizing Access)',
+      userMessage: 'Congratulations! Your monthly auto-debit setup with NORTHERN ARC is confirmed. In 2-3 days we will complete the class access.',
+      guidanceMessage: 'In 2-3 days we will complete the class access and unlock your Genius LMS portal.',
+      cadenceStep: 4,
+      classAccessEta: 'In 2-3 days we will complete the class access',
+      isDisbursed: false,
+      isEmiDone: true,
+    };
+  }
+
+  // Case 3: EMI Setup in Progress / Pending
+  if (lower.includes('emi setup in progress') || lower.includes('emi setup pending') || lower.includes('mandate pending')) {
+    return {
+      statusCode: 'EMI_SETUP_PENDING',
+      statusLabel: 'Auto-Debit (e-NACH) Setup in Progress',
+      userMessage: 'Our NORTHERN ARC partner will connect with you to register monthly auto-debit (0% interest).',
+      guidanceMessage: 'Keep your net banking or debit card handy for e-NACH mandate registration.',
+      cadenceStep: 4,
+      classAccessEta: 'Pending Auto-Debit Setup',
+      isDisbursed: false,
+      isEmiDone: false,
+    };
+  }
+
+  // Case 4: Approved / Ready For EMI Setup / Sanctioned
+  if (
+    lower.includes('approved ready for emi setup') ||
+    lower.includes('approved- all post approval') ||
+    lower.includes('loan approved') ||
+    lower.includes('approved')
+  ) {
+    return {
+      statusCode: 'APPROVED',
+      statusLabel: 'Loan Approved - Auto-Debit Setup Next',
+      userMessage: 'Great news! Your educational facility has been approved by NORTHERN ARC. Auto-debit registration will begin shortly.',
+      guidanceMessage: 'Our admissions desk will facilitate the e-NACH mandate link with NORTHERN ARC.',
+      cadenceStep: 3,
+      classAccessEta: 'In 3-4 days following auto-debit setup',
+      isDisbursed: false,
+      isEmiDone: false,
+    };
+  }
+
+  // Case 5: VKYC Pending / Bonafide Pending / Digital Sanction
+  if (lower.includes('vkyc pending') || lower.includes('bonafide pending') || lower.includes('video kyc')) {
+    return {
+      statusCode: 'SANCTION_PENDING',
+      statusLabel: 'Video KYC & Sanction Pending',
+      userMessage: 'Your application is sanctioned. Please complete the quick Video KYC with NORTHERN ARC.',
+      guidanceMessage: 'Ensure original PAN card and physical presence of co-applicant during video verification.',
+      cadenceStep: 3,
+      classAccessEta: 'In 3-5 days',
+      isDisbursed: false,
+      isEmiDone: false,
+    };
+  }
+
+  // Case 6: Documents Pending
+  if (lower.includes('documents pending')) {
+    return {
+      statusCode: 'DOCUMENTS_REQUIRED',
+      statusLabel: 'Documents Required by Northern Arc',
+      userMessage: 'NORTHERN ARC underwriting team has requested additional or clear documents.',
+      guidanceMessage: 'Please provide the requested documents to continue underwriting.',
+      cadenceStep: 2,
+      classAccessEta: 'Awaiting documentation',
+      isDisbursed: false,
+      isEmiDone: false,
+    };
+  }
+
+  // Case 7: Rejected
+  if (lower.includes('rejected') || lower.includes('declined') || lower.includes('dropped')) {
+    return {
+      statusCode: 'REJECTED',
+      statusLabel: 'Application Declined by Northern Arc',
+      userMessage: 'NORTHERN ARC was unable to approve this loan application based on credit criteria.',
+      guidanceMessage: 'You can nominate an alternate earning co-applicant or complete enrollment via direct fee payment.',
+      cadenceStep: 2,
+      classAccessEta: null,
+      isDisbursed: false,
+      isEmiDone: false,
+    };
+  }
+
+  // Case 8: Consent Taken / Under Assessment / Credit Review / Application in NBFC
+  if (
+    lower.includes('under assessment') ||
+    lower.includes('sent for manual under writing') ||
+    lower.includes('telereview') ||
+    lower.includes('credit review') ||
+    lower.includes('consent taken') ||
+    lower.includes('application in nbfc')
+  ) {
+    return {
+      statusCode: 'UNDER_REVIEW',
+      statusLabel: 'Document & Credit Review in Progress',
+      userMessage: 'Your application is under review with NORTHERN ARC. The credit and underwriting team is validating details.',
+      guidanceMessage: 'Typical turnaround time is 24 to 48 business hours.',
+      cadenceStep: 2,
+      classAccessEta: 'In 3-5 days',
+      isDisbursed: false,
+      isEmiDone: false,
+    };
+  }
+
+  // Case 9: Consent Pending
+  if (lower.includes('consent pending')) {
+    return {
+      statusCode: 'CONSENT_PENDING',
+      statusLabel: 'Co-Applicant Consent Pending',
+      userMessage: 'A digital consent link has been dispatched to your co-applicant by NORTHERN ARC.',
+      guidanceMessage: 'Please ask your co-applicant to approve the SMS consent request to initiate assessment.',
+      cadenceStep: 1,
+      classAccessEta: 'Awaiting co-applicant consent',
+      isDisbursed: false,
+      isEmiDone: false,
+    };
+  }
+
+  // Default: Application Created / Initiated
+  return {
+    statusCode: 'APPLICATION_CREATED',
+    statusLabel: 'Application Initiated with Northern Arc',
+    userMessage: 'Your No-Cost EMI educational application has been initiated with NORTHERN ARC.',
+    guidanceMessage: 'Our admissions desk is coordinating the initial verification with NORTHERN ARC.',
+    cadenceStep: 1,
+    classAccessEta: 'In 3-5 days',
+    isDisbursed: false,
+    isEmiDone: false,
+  };
+}
+
   // 11. Handle GET /api/enrollment/:token/journey
   if (url.pathname.includes('/journey') && request.method === 'GET') {
     const token = url.pathname.split('/')[3] || 'a03fv0000014m0zAAA';
     try {
       const rec = await getSalesforceRecordByToken(env, token);
       if (rec) {
+        const studentPhone = rec.PHONE_NUMBER__c || rec.Student_WhatsApp_Number__c || rec.Student_Number__c;
+        if (studentPhone) {
+          try {
+            const cleanP = String(studentPhone).replace(/\D/g, '').slice(-10);
+            const childSoql = `SELECT Id, Name, Choose_NBFC_PRE__c, other_NBFC_PRE__c, Northern_Arc_App_ID_PRE__c, Northern_Arc_Overall_Stages__c, Northern_Arc_Loan_Amount__c, Northern_Arc_Approved_Amount__c, Northern_Arc_Approved_Tenure__c, Northern_Arc_Remarks__c, Northern_Arc_Rejected_Reasons__c, Master_App_ID__c, Master_Applied_Loan_Amount__c, Master_Approved_Loan_Amount__c, student_phone_number__c, Academy_Onboarding_PRE_L__c, Gyandhan_Overall_Stages__c, Gyandhan_Sub_Status__c, Fibe_Overall_Stages__c, Fibe_Overall_Loan_Status__c, LastModifiedDate FROM NBFC_Onboarding__c WHERE (Academy_Onboarding_PRE_L__c = '${rec.Id}' OR student_phone_number__c LIKE '%${cleanP}%') ORDER BY LastModifiedDate DESC LIMIT 10`;
+            const childRecords = await querySalesforce(env, childSoql);
+            const accountSpecific = (childRecords || []).filter((c: any) => c.Academy_Onboarding_PRE_L__c === rec.Id);
+            const activeChild = accountSpecific[0] || (childRecords || [])[0] || null;
+            if (activeChild) {
+              const rawLender = activeChild.Choose_NBFC_PRE__c || activeChild.Name || rec.Choose_NBFC_PRE__c;
+              if (rawLender && rawLender.toUpperCase().includes('NORTHERN')) {
+                rec.Choose_NBFC_PRE__c = 'NORTHERN_ARC';
+                rec.Northern_Arc_Overall_Stages__c = activeChild.Northern_Arc_Overall_Stages__c;
+                rec.other_NBFC_PRE__c = activeChild.other_NBFC_PRE__c;
+                if (activeChild.Northern_Arc_Loan_Amount__c) {
+                  rec.Applied_Loan_Amount__c = activeChild.Northern_Arc_Loan_Amount__c;
+                }
+              }
+            }
+          } catch (cErr) {
+            console.warn('Child NBFC lookup in journey warning:', cErr);
+          }
+        }
+
         const item = sanitizeAndMapRecord(rec);
         return new Response(
           JSON.stringify({ success: true, journey: item.journey }),
@@ -635,7 +859,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     );
   }
 
-  // 8. Handle GET /api/enrollment/:token/nbfc-status
+  // 12. Handle GET /api/enrollment/:token/nbfc-status
   if (url.pathname.includes('/nbfc-status')) {
     const token = url.pathname.split('/')[3] || 'a03fv0000014m0zAAA';
     try {
@@ -647,25 +871,61 @@ export const onRequest: PagesFunction<Env> = async (context) => {
       const soql = `SELECT ${ACADEMY_FIELDS} FROM Academy_Onboarding_PRE__c WHERE ${whereClause} LIMIT 1`;
       const records = await querySalesforce(env, soql);
       if (records && records.length > 0) {
-        const item = sanitizeAndMapRecord(records[0]);
         const rec = records[0];
         const studentPhone = rec.PHONE_NUMBER__c || rec.Student_WhatsApp_Number__c || rec.Student_Number__c;
         let childRecords: any[] = [];
         if (studentPhone) {
           try {
             const cleanP = String(studentPhone).replace(/\D/g, '').slice(-10);
-            const childSoql = `SELECT Id, Name, Master_App_ID__c, Master_Applied_Loan_Amount__c, Master_Approved_Loan_Amount__c, student_phone_number__c, Academy_Onboarding_PRE_L__c, Northern_Arc_Stage__c, Gyandhan_Stage__c, LiquiLoans_Stage__c, Fibe_Stage__c, Propelld_Stage__c FROM NBFC_Onboarding__c WHERE (Academy_Onboarding_PRE_L__c = '${rec.Id}' OR student_phone_number__c LIKE '%${cleanP}%') ORDER BY LastModifiedDate DESC LIMIT 10`;
+            const childSoql = `SELECT Id, Name, Choose_NBFC_PRE__c, other_NBFC_PRE__c, Northern_Arc_App_ID_PRE__c, Northern_Arc_Overall_Stages__c, Northern_Arc_Loan_Amount__c, Northern_Arc_Approved_Amount__c, Northern_Arc_Approved_Tenure__c, Northern_Arc_Remarks__c, Northern_Arc_Rejected_Reasons__c, Master_App_ID__c, Master_Applied_Loan_Amount__c, Master_Approved_Loan_Amount__c, student_phone_number__c, Academy_Onboarding_PRE_L__c, Gyandhan_Overall_Stages__c, Gyandhan_Sub_Status__c, Fibe_Overall_Stages__c, Fibe_Overall_Loan_Status__c, LastModifiedDate FROM NBFC_Onboarding__c WHERE (Academy_Onboarding_PRE_L__c = '${rec.Id}' OR student_phone_number__c LIKE '%${cleanP}%') ORDER BY LastModifiedDate DESC LIMIT 10`;
             childRecords = await querySalesforce(env, childSoql);
           } catch (cErr) {
             console.warn('Child NBFC SOQL query warning:', cErr);
           }
         }
+
         const accountSpecific = childRecords.filter((c: any) => c.Academy_Onboarding_PRE_L__c === rec.Id);
         const activeChild = accountSpecific[0] || childRecords[0] || null;
-        const activeLender = activeChild?.Name || rec.Choose_NBFC_PRE__c || 'NORTHERN ARC';
-        const rawChildStage = activeChild?.Northern_Arc_Stage__c || activeChild?.Gyandhan_Stage__c || activeChild?.LiquiLoans_Stage__c || activeChild?.Fibe_Stage__c || activeChild?.Propelld_Stage__c || rec.Onboarding_Status__c;
-        const appliedAmount = Number(activeChild?.Master_Applied_Loan_Amount__c || rec.Applied_Loan_Amount__c || 120000);
-        const isEmiDone = rawChildStage ? (rawChildStage.toLowerCase().includes('emi setup done') || rawChildStage.toLowerCase().includes('disbursed')) : false;
+        const rawLender = activeChild?.Choose_NBFC_PRE__c || activeChild?.Name || rec.Choose_NBFC_PRE__c || 'NORTHERN ARC';
+        const isNorthern = rawLender.toUpperCase().includes('NORTHERN');
+        const activeLender = isNorthern ? 'NORTHERN ARC' : rawLender;
+
+        const appliedAmount = Number(activeChild?.Northern_Arc_Loan_Amount__c || activeChild?.Master_Applied_Loan_Amount__c || rec.Applied_Loan_Amount__c || 120000);
+        const approvedAmount = Number(activeChild?.Northern_Arc_Approved_Amount__c || activeChild?.Master_Approved_Loan_Amount__c || appliedAmount);
+        const approvedTenure = activeChild?.Northern_Arc_Approved_Tenure__c || '6 Months';
+
+        let resolvedStatus: ReturnType<typeof resolveNorthernArcStage>;
+        if (isNorthern) {
+          resolvedStatus = resolveNorthernArcStage(activeChild, rec);
+        } else {
+          const rawChildStage = activeChild?.Northern_Arc_Overall_Stages__c || activeChild?.other_NBFC_PRE__c || activeChild?.Gyandhan_Overall_Stages__c || activeChild?.Fibe_Overall_Stages__c || rec.Onboarding_Status__c;
+          const isEmiDone = rawChildStage ? (rawChildStage.toLowerCase().includes('emi setup done') || rawChildStage.toLowerCase().includes('disbursed')) : false;
+          resolvedStatus = {
+            statusCode: isEmiDone ? 'EMI_SETUP_COMPLETED' : 'UNDER_REVIEW',
+            statusLabel: isEmiDone ? 'Auto-Debit Configured (Finalizing Access)' : 'Under Review',
+            userMessage: isEmiDone
+              ? `Congratulations! Your monthly auto-debit setup with ${activeLender} is confirmed. In 2-3 days we will complete the class access.`
+              : `Your No-Cost EMI educational application has been created with ${activeLender}.`,
+            guidanceMessage: isEmiDone
+              ? 'In 2-3 days we will complete the class access and unlock your Genius LMS portal.'
+              : 'Our admissions desk is coordinating the initial verification.',
+            cadenceStep: isEmiDone ? 4 : 2,
+            classAccessEta: 'In 2-3 days we will complete the class access',
+            isDisbursed: false,
+            isEmiDone,
+          };
+        }
+
+        const cadenceStages = buildCadenceStages(resolvedStatus.cadenceStep, resolvedStatus.isEmiDone, resolvedStatus.isDisbursed);
+
+        // Update rec with resolved lender and loan amount before mapping canonical journey
+        if (isNorthern) {
+          rec.Choose_NBFC_PRE__c = 'NORTHERN_ARC';
+          rec.Northern_Arc_Overall_Stages__c = activeChild?.Northern_Arc_Overall_Stages__c;
+          rec.other_NBFC_PRE__c = activeChild?.other_NBFC_PRE__c;
+          rec.Applied_Loan_Amount__c = appliedAmount;
+        }
+        const item = sanitizeAndMapRecord(rec);
 
         return new Response(
           JSON.stringify({
@@ -674,42 +934,33 @@ export const onRequest: PagesFunction<Env> = async (context) => {
               applied: true,
               appliedAmount,
               nbfcName: activeLender,
-              applicationId: activeChild?.Master_App_ID__c || `NBFC-${rec.Id.slice(-6).toUpperCase()}`,
-              status: isEmiDone ? 'EMI_SETUP_COMPLETED' : 'UNDER_REVIEW',
-              statusLabel: isEmiDone ? 'Auto-Debit Configured (Finalizing Access)' : 'Under Review',
-              approvedAmount: Number(activeChild?.Master_Approved_Loan_Amount__c || appliedAmount),
-              approvedTenure: '6 Months',
+              applicationId: activeChild?.Northern_Arc_App_ID_PRE__c || activeChild?.Master_App_ID__c || `NBFC-${rec.Id.slice(-6).toUpperCase()}`,
+              status: resolvedStatus.statusCode,
+              statusLabel: resolvedStatus.statusLabel,
+              approvedAmount,
+              approvedTenure,
               emiAmountMonthly: Math.round(appliedAmount / 6),
-              emiTenure: '6 Months',
+              emiTenure: approvedTenure,
             },
             journey: item.journey,
             nbfc: {
-              statusCode: isEmiDone ? 'EMI_SETUP_COMPLETED' : 'UNDER_REVIEW',
-              statusLabel: isEmiDone ? 'Auto-Debit Configured (Finalizing Access)' : 'Under Review',
+              statusCode: resolvedStatus.statusCode,
+              statusLabel: resolvedStatus.statusLabel,
               activeLender,
-              userMessage: isEmiDone
-                ? `Congratulations! Your monthly auto-debit setup with ${activeLender} is confirmed. In 2-3 days we will complete the class access.`
-                : `Your No-Cost EMI educational application has been created with ${activeLender}.`,
-              guidanceMessage: isEmiDone
-                ? 'In 2-3 days we will complete the class access and unlock your Genius LMS portal.'
-                : 'Our admissions desk is coordinating the initial verification.',
-              cadenceStep: isEmiDone ? 4 : 2,
-              cadenceStages: [
-                { step: 1, name: 'Application & Consent', description: 'Educational EMI application initiated & consent link sent to co-applicant', isCompleted: true, isCurrent: false },
-                { step: 2, name: 'Document & Credit Review', description: 'Lender underwriting team reviews KYC, income details & credit bureau score', isCompleted: isEmiDone, isCurrent: !isEmiDone },
-                { step: 3, name: 'Sanction & Video KYC', description: 'Loan sanctioned, digital agreement signing & quick Video KYC (if applicable)', isCompleted: isEmiDone, isCurrent: false },
-                { step: 4, name: 'Auto-Debit (e-NACH) Setup', description: 'Our NBFC partner will connect with you to register monthly auto-debit (0% interest)', isCompleted: false, isCurrent: isEmiDone },
-                { step: 5, name: 'Disbursement & Class Access', description: 'Facility disbursed directly to NxtWave and Genius LMS portal unlocked', isCompleted: false, isCurrent: false },
-              ],
+              userMessage: resolvedStatus.userMessage,
+              guidanceMessage: resolvedStatus.guidanceMessage,
+              cadenceStep: resolvedStatus.cadenceStep,
+              cadenceStages,
               callToAction: null,
-              classAccessEta: 'In 2-3 days we will complete the class access',
-              lastUpdated: rec.LastModifiedDate || new Date().toISOString(),
+              classAccessEta: resolvedStatus.classAccessEta,
+              lastUpdated: activeChild?.LastModifiedDate || rec.LastModifiedDate || new Date().toISOString(),
               allNbfcs: childRecords.map((c: any) => ({
                 id: c.Id,
-                nbfcName: c.Name,
-                facilityAmount: Number(c.Master_Applied_Loan_Amount__c || 0),
-                facilityAmountFormatted: `₹${(Number(c.Master_Applied_Loan_Amount__c || 0)).toLocaleString('en-IN')}`,
+                nbfcName: c.Choose_NBFC_PRE__c || c.Name || 'NORTHERN ARC',
+                facilityAmount: Number(c.Northern_Arc_Loan_Amount__c || c.Master_Applied_Loan_Amount__c || 0),
+                facilityAmountFormatted: `₹${(Number(c.Northern_Arc_Loan_Amount__c || c.Master_Applied_Loan_Amount__c || 0)).toLocaleString('en-IN')}`,
                 isActive: c.Academy_Onboarding_PRE_L__c === rec.Id,
+                stage: c.Northern_Arc_Overall_Stages__c || c.other_NBFC_PRE__c || 'In Progress',
               })),
             },
           }),

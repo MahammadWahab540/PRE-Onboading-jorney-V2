@@ -17,8 +17,29 @@ export interface MappedNbfcResult {
 /**
  * Maps heterogeneous lender stages into canonical NbfcStatus.
  */
+export function normalizeLenderName(raw?: string | null): string {
+  if (!raw) return 'Northern Arc';
+  const upper = raw.toUpperCase();
+  if (upper.includes('NORTHERN')) return 'Northern Arc';
+  if (upper.includes('FIBE')) return 'Fibe';
+  if (upper.includes('GYANDHAN')) return 'Gyandhan';
+  if (upper.includes('JODO')) return 'Jodo';
+  if (upper.includes('FINZ')) return 'Finz';
+  if (upper.includes('AUXILO')) return 'Auxilo';
+  if (upper.includes('BAJAJ')) return 'Bajaj';
+  if (upper.includes('SHOPSE')) return 'Shopse';
+  if (upper.includes('FEEMONK')) return 'FeeMonk';
+  if (upper.includes('MONEYVIEW')) return 'Moneyview';
+  if (upper.includes('VARTHANA')) return 'Varthana';
+  return raw;
+}
+
+/**
+ * Maps heterogeneous lender stages into canonical NbfcStatus.
+ */
 export function mapNbfcStatus(record: SalesforceOnboardingRecord): MappedNbfcResult {
-  const lender = record.Choose_NBFC_PRE__c || 'Northern Arc';
+  const rawLender = record.Choose_NBFC_PRE__c || 'Northern Arc';
+  const lender = normalizeLenderName(rawLender);
 
   let canonicalStatus: NbfcStatus = 'APPLICATION_CREATED';
   let label = 'Application Created';
@@ -27,36 +48,40 @@ export function mapNbfcStatus(record: SalesforceOnboardingRecord): MappedNbfcRes
 
   switch (lender) {
     case 'Northern Arc': {
-      const stage = record.Northern_Arc_Overall_Stages__c || 'Application Form Filled';
+      const rawStage = record.Northern_Arc_Overall_Stages__c || (record as any).other_NBFC_PRE__c || record.Onboarding_Status__c || 'Application Form Filled';
+      const stageLower = String(rawStage).toLowerCase();
       rejectionReason = record.Northern_Arc_Rejected_Reasons__c || record.Northern_Arc_Remarks__c;
 
-      if (stage.includes('Loan Disbursed') || stage.includes('Disbursed')) {
+      if (stageLower.includes('disbursed')) {
         canonicalStatus = 'DISBURSED';
         label = 'Loan Disbursed';
-      } else if (stage.includes('Disbursement Pending')) {
+      } else if (stageLower.includes('disbursement pending')) {
         canonicalStatus = 'DISBURSEMENT_PENDING';
         label = 'Disbursement Pending';
-      } else if (stage.includes('EMI Setup Done') || stage.includes('Mandate Success')) {
+      } else if (stageLower.includes('emi setup done') || stageLower.includes('mandate success')) {
         canonicalStatus = 'EMI_SETUP_COMPLETED';
-        label = 'Auto-Debit Configured';
-      } else if (stage.includes('EMI Setup Pending') || stage.includes('Mandate Pending')) {
+        label = 'Auto-Debit Configured (Finalizing Access)';
+      } else if (stageLower.includes('emi setup') || stageLower.includes('mandate')) {
         canonicalStatus = 'EMI_SETUP_PENDING';
         label = 'Auto-Debit Setup Pending';
-      } else if (stage.includes('Loan Rejected') || stage.includes('Rejected')) {
+      } else if (stageLower.includes('rejected') || stageLower.includes('declined') || stageLower.includes('dropped')) {
         canonicalStatus = 'REJECTED';
         label = 'Application Not Approved';
-      } else if (stage.includes('Loan Approved') || stage.includes('Approved')) {
+      } else if (stageLower.includes('approved') || stageLower.includes('sanction')) {
         canonicalStatus = 'APPROVED';
         label = 'Loan Approved';
-      } else if (stage.includes('Review In Progress') || stage.includes('Under Review')) {
+      } else if (stageLower.includes('under review') || stageLower.includes('assessment') || stageLower.includes('underwriting') || stageLower.includes('review') || stageLower.includes('consent taken') || stageLower.includes('application in nbfc')) {
         canonicalStatus = 'UNDER_REVIEW';
         label = 'Under Lender Review';
-      } else if (stage.includes('KYC Done')) {
+      } else if (stageLower.includes('kyc done')) {
         canonicalStatus = 'KYC_COMPLETED';
         label = 'KYC Completed';
-      } else if (stage.includes('KYC Pending')) {
+      } else if (stageLower.includes('kyc pending') || stageLower.includes('vkyc pending')) {
         canonicalStatus = 'KYC_PENDING';
         label = 'KYC Verification Pending';
+      } else if (stageLower.includes('documents pending')) {
+        canonicalStatus = 'DOCUMENTS_REQUIRED';
+        label = 'Documents Pending';
       } else {
         canonicalStatus = 'APPLICATION_CREATED';
         label = 'Application Created';
