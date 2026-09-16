@@ -502,6 +502,92 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     );
   }
 
+  // 8. Handle GET /api/enrollment/:token/nbfc-status
+  if (url.pathname.includes('/nbfc-status')) {
+    const token = url.pathname.split('/')[3] || 'a03fv0000014m0zAAA';
+    try {
+      const cleanToken = token.replace(/'/g, "\\'");
+      const isSfId = /^[a-zA-Z0-9]{15,18}$/.test(cleanToken);
+      const whereClause = isSfId
+        ? `userId__c = '${cleanToken}' OR Program_Registered_UID_PRE__c = '${cleanToken}' OR Id = '${cleanToken}'`
+        : `userId__c = '${cleanToken}' OR Program_Registered_UID_PRE__c = '${cleanToken}'`;
+      const soql = `SELECT ${ACADEMY_FIELDS} FROM Academy_Onboarding_PRE__c WHERE ${whereClause} LIMIT 1`;
+      const records = await querySalesforce(env, soql);
+      if (records && records.length > 0) {
+        const item = sanitizeAndMapRecord(records[0]);
+        const rec = records[0];
+        const studentPhone = rec.PHONE_NUMBER__c || rec.Student_WhatsApp_Number__c || rec.Student_Number__c;
+        let childRecords: any[] = [];
+        if (studentPhone) {
+          try {
+            const cleanP = String(studentPhone).replace(/\D/g, '').slice(-10);
+            const childSoql = `SELECT Id, Name, Master_App_ID__c, Master_Applied_Loan_Amount__c, Master_Approved_Loan_Amount__c, student_phone_number__c, Academy_Onboarding_PRE_L__c, Northern_Arc_Stage__c, Gyandhan_Stage__c, LiquiLoans_Stage__c, Fibe_Stage__c, Propelld_Stage__c FROM NBFC_Onboarding__c WHERE (Academy_Onboarding_PRE_L__c = '${rec.Id}' OR student_phone_number__c LIKE '%${cleanP}%') ORDER BY LastModifiedDate DESC LIMIT 10`;
+            childRecords = await querySalesforce(env, childSoql);
+          } catch (cErr) {
+            console.warn('Child NBFC SOQL query warning:', cErr);
+          }
+        }
+        const accountSpecific = childRecords.filter((c: any) => c.Academy_Onboarding_PRE_L__c === rec.Id);
+        const activeChild = accountSpecific[0] || childRecords[0] || null;
+        const activeLender = activeChild?.Name || rec.Choose_NBFC_PRE__c || 'NORTHERN ARC';
+        const rawChildStage = activeChild?.Northern_Arc_Stage__c || activeChild?.Gyandhan_Stage__c || activeChild?.LiquiLoans_Stage__c || activeChild?.Fibe_Stage__c || activeChild?.Propelld_Stage__c || rec.Onboarding_Status__c;
+        const appliedAmount = Number(activeChild?.Master_Applied_Loan_Amount__c || rec.Applied_Loan_Amount__c || 120000);
+        const isEmiDone = rawChildStage ? (rawChildStage.toLowerCase().includes('emi setup done') || rawChildStage.toLowerCase().includes('disbursed')) : false;
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            financing: {
+              applied: true,
+              appliedAmount,
+              nbfcName: activeLender,
+              applicationId: activeChild?.Master_App_ID__c || `NBFC-${rec.Id.slice(-6).toUpperCase()}`,
+              status: isEmiDone ? 'EMI_SETUP_COMPLETED' : 'UNDER_REVIEW',
+              statusLabel: isEmiDone ? 'Auto-Debit Configured (Finalizing Access)' : 'Under Review',
+              approvedAmount: Number(activeChild?.Master_Approved_Loan_Amount__c || appliedAmount),
+              approvedTenure: '6 Months',
+              emiAmountMonthly: Math.round(appliedAmount / 6),
+              emiTenure: '6 Months',
+            },
+            journey: item.journey,
+            nbfc: {
+              statusCode: isEmiDone ? 'EMI_SETUP_COMPLETED' : 'UNDER_REVIEW',
+              statusLabel: isEmiDone ? 'Auto-Debit Configured (Finalizing Access)' : 'Under Review',
+              activeLender,
+              userMessage: isEmiDone
+                ? `Congratulations! Your monthly auto-debit setup with ${activeLender} is confirmed. In 2-3 days we will complete the class access.`
+                : `Your No-Cost EMI educational application has been created with ${activeLender}.`,
+              guidanceMessage: isEmiDone
+                ? 'In 2-3 days we will complete the class access and unlock your Genius LMS portal.'
+                : 'Our admissions desk is coordinating the initial verification.',
+              cadenceStep: isEmiDone ? 4 : 2,
+              cadenceStages: [
+                { step: 1, name: 'Application & Consent', description: 'Educational EMI application initiated & consent link sent to co-applicant', isCompleted: true, isCurrent: false },
+                { step: 2, name: 'Document & Credit Review', description: 'Lender underwriting team reviews KYC, income details & credit bureau score', isCompleted: isEmiDone, isCurrent: !isEmiDone },
+                { step: 3, name: 'Sanction & Video KYC', description: 'Loan sanctioned, digital agreement signing & quick Video KYC (if applicable)', isCompleted: isEmiDone, isCurrent: false },
+                { step: 4, name: 'Auto-Debit (e-NACH) Setup', description: 'Our NBFC partner will connect with you to register monthly auto-debit (0% interest)', isCompleted: false, isCurrent: isEmiDone },
+                { step: 5, name: 'Disbursement & Class Access', description: 'Facility disbursed directly to NxtWave and Genius LMS portal unlocked', isCompleted: false, isCurrent: false },
+              ],
+              callToAction: null,
+              classAccessEta: 'In 2-3 days we will complete the class access',
+              lastUpdated: rec.LastModifiedDate || new Date().toISOString(),
+              allNbfcs: childRecords.map((c: any) => ({
+                id: c.Id,
+                nbfcName: c.Name,
+                facilityAmount: Number(c.Master_Applied_Loan_Amount__c || 0),
+                facilityAmountFormatted: `₹${(Number(c.Master_Applied_Loan_Amount__c || 0)).toLocaleString('en-IN')}`,
+                isActive: c.Academy_Onboarding_PRE_L__c === rec.Id,
+              })),
+            },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } }
+        );
+      }
+    } catch (e: any) {
+      console.warn('Salesforce nbfc-status fetch fallback warning:', e);
+    }
+  }
+
   return new Response(
     JSON.stringify({ message: 'Cloudflare Pages API route OK', path: url.pathname }),
     { status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } }

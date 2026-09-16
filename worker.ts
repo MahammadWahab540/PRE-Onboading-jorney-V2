@@ -29,7 +29,16 @@ export default {
       return onRequest(context as any);
     }
 
-    // Serve static assets from Vite dist/
-    return env.ASSETS.fetch(request);
+    // Serve static assets from Vite dist/ with SPA fallback
+    if (env.ASSETS) {
+      let response = await env.ASSETS.fetch(request);
+      if (response.status === 404 && request.method === 'GET') {
+        const indexUrl = new URL('/', request.url);
+        response = await env.ASSETS.fetch(new Request(indexUrl, request));
+      }
+      return response;
+    }
+
+    return new Response('Assets binding not found', { status: 500 });
   },
 };
