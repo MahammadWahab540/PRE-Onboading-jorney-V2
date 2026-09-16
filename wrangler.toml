@@ -1,12 +1,14 @@
-name = "pre-onboarding-journey"
+name = "pre-onboading-jorney-v2"
+main = "worker.ts"
 pages_build_output_dir = "./dist"
-compatibility_date = "2026-09-09"
+compatibility_date = "2026-09-08"
 compatibility_flags = ["nodejs_compat"]
 send_metrics = false
 
-# Keep only non-secret runtime configuration in source control.
-# Secrets such as Salesforce, Supabase service-role and provider credentials
-# must be configured in Cloudflare Pages for both Preview and Production.
+[assets]
+directory = "./dist"
+not_found_handling = "single-page-application"
+
 [vars]
 DATA_SOURCE = "salesforce"
 SUPABASE_URL = "https://jqxmyxuagerayrgvxjwg.supabase.co"

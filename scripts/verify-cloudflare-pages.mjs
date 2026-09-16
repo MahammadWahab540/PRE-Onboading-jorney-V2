@@ -19,7 +19,7 @@ requireFile(join(root, 'functions', 'api', 'health.ts'), 'Pages health function'
 if (existsSync(join(root, 'wrangler.toml'))) {
   const wrangler = readFileSync(join(root, 'wrangler.toml'), 'utf8');
   const checks = [
-    [/name\s*=\s*"pre-onboarding-journey"/, 'wrangler project name'],
+    [/name\s*=\s*"(pre-onboarding-journey|pre-onboading-jorney-v2)"/, 'wrangler project name'],
     [/pages_build_output_dir\s*=\s*"\.\/dist"/, 'wrangler Pages output directory'],
     [/compatibility_date\s*=\s*"\d{4}-\d{2}-\d{2}"/, 'wrangler compatibility date'],
     [/nodejs_compat/, 'wrangler nodejs_compat flag'],

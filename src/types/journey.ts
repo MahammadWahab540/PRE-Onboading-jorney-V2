@@ -102,6 +102,8 @@ export interface ProgramDetails {
   scholarshipType?: string;
   seatReservationPaid: number;
   amountPayable: number;
+  amountToBeReceived?: number;
+  remainingAmountPayable?: number;
   totalProgramPrice: number;
   currency: string;
 }

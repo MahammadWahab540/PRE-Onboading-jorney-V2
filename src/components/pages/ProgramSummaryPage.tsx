@@ -31,22 +31,44 @@ export const ProgramSummaryPage: React.FC<ProgramSummaryPageProps> = ({
   const prefersReducedMotion = useReducedMotion();
   const [showCurriculumVideo, setShowCurriculumVideo] = useState(false);
 
-  // Commercial Pricing Data
-  const baseFee = state.program.baseFee || state.canonicalJourney?.program.baseFee || 160000;
-  const scholarshipAmount =
-    state.program.scholarshipAmount ||
-    state.canonicalJourney?.program.scholarshipAmount ||
-    30000;
-  const seatReservationPaid =
-    state.program.seatReservationPaid ||
-    state.canonicalJourney?.program.seatReservationPaid ||
-    18000;
-  const amountPayable =
-    state.program.amountPayable ||
-    state.canonicalJourney?.program.amountPayable ||
-    Math.max(0, baseFee - scholarshipAmount - seatReservationPaid);
+  // Commercial Pricing Data mapped directly to Salesforce fields:
+  // 1. Product_Price__c -> baseFee (full amount: ₹3,00,000)
+  // 2. Payment_Plan_Discount__c -> scholarshipAmount (discount: ₹50,000)
+  // 3. Amount_to_be_Receive__c -> amountToBeReceived (total to be paid by user: ₹2,50,000)
+  // 4. Total_Amount_PRE__c -> seatReservationPaid (seat reservation paid till now: ₹18,000)
+  // 5. Remaining_Amount_To_Be_Paid_PRE__c -> netRemainingPayable (remaining balance: ₹2,32,000)
+  const baseFee =
+    state?.program?.baseFee ||
+    state?.canonicalJourney?.program?.baseFee ||
+    180000;
 
-  const programTitle = state.program.name || 'NxtWave Genius';
+  const amountToBeReceived =
+    state?.program?.amountToBeReceived ||
+    state?.program?.amountPayable ||
+    state?.canonicalJourney?.program?.amountToBeReceived ||
+    state?.canonicalJourney?.program?.amountPayable ||
+    250000;
+
+  const scholarshipAmount =
+    state?.program?.scholarshipAmount && state.program.scholarshipAmount > 0
+      ? state.program.scholarshipAmount
+      : state?.canonicalJourney?.program?.scholarshipAmount && state.canonicalJourney.program.scholarshipAmount > 0
+      ? state.canonicalJourney.program.scholarshipAmount
+      : baseFee > amountToBeReceived
+      ? baseFee - amountToBeReceived
+      : 50000;
+
+  const seatReservationPaid =
+    state?.program?.seatReservationPaid ??
+    state?.canonicalJourney?.program?.seatReservationPaid ??
+    0;
+
+  const netRemainingPayable =
+    state?.program?.remainingAmountPayable ??
+    state?.canonicalJourney?.program?.remainingAmountPayable ??
+    32000;
+
+  const programTitle = state?.program?.name || 'NxtWave Smart Program';
 
   return (
     <div className="w-full max-w-2xl mx-auto px-4 py-8 sm:py-12">
@@ -108,30 +130,40 @@ export const ProgramSummaryPage: React.FC<ProgramSummaryPageProps> = ({
               </span>
             </div>
 
-            {/* 3. Seat Reservation Paid */}
-            <div className="flex items-center justify-between text-emerald-700">
-              <span className="font-medium flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                <span>Seat Reservation Fee (Paid Till Now)</span>
-              </span>
-              <span className="font-mono font-semibold">
-                -₹{seatReservationPaid.toLocaleString('en-IN')}
+            {/* Subtotal: Total Amount to be Paid by User */}
+            <div className="flex items-center justify-between py-2 px-3 bg-[#0B63E5]/5 rounded-xl border border-blue-200/80 text-blue-900 font-semibold text-xs">
+              <span>Total Program Fee (After Scholarship)</span>
+              <span className="font-mono font-bold text-sm text-[#0B63E5]">
+                ₹{amountToBeReceived.toLocaleString('en-IN')}
               </span>
             </div>
+
+            {/* 3. Seat Reservation Fee Paid */}
+            {seatReservationPaid > 0 && (
+              <div className="flex items-center justify-between text-emerald-700 pt-1">
+                <span className="font-medium flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                  <span>Seat Reservation Fee (Paid Till Now)</span>
+                </span>
+                <span className="font-mono font-semibold">
+                  -₹{seatReservationPaid.toLocaleString('en-IN')}
+                </span>
+              </div>
+            )}
 
             {/* Divider Line */}
             <div className="pt-3 border-t-2 border-slate-300/80" />
 
-            {/* 4. Net Amount Payable */}
+            {/* 4. Net Remaining Balance Payable */}
             <div className="flex items-center justify-between pt-1 text-base sm:text-lg">
               <div>
-                <span className="font-bold text-[#0A192F] block">Amount Payable</span>
+                <span className="font-bold text-[#0A192F] block">Net Remaining Amount Payable</span>
                 <span className="text-xs text-slate-500 font-normal">
                   All inclusive • zero hidden charges
                 </span>
               </div>
               <span className="font-mono font-bold text-2xl text-[#0B63E5]">
-                ₹{amountPayable.toLocaleString('en-IN')}
+                ₹{netRemainingPayable.toLocaleString('en-IN')}
               </span>
             </div>
           </div>

@@ -9,13 +9,16 @@ import {
   ArrowRight,
   ArrowLeft,
   Calendar,
-  DollarSign,
-  HelpCircle,
   RefreshCw,
   Sparkles,
   ShieldCheck,
   PhoneCall,
   FileCheck,
+  ChevronDown,
+  ChevronUp,
+  Info,
+  CreditCard,
+  Lock,
 } from 'lucide-react';
 import type { EnrollmentState, EnrollmentJourney } from '../../types';
 import { ActionRequiredCard } from '../ActionRequiredCard';
@@ -46,12 +49,23 @@ export interface NbfcChildRecordItem {
   coApplicantRelation: string | null;
 }
 
+export interface CadenceStageItem {
+  step: number;
+  name: string;
+  description: string;
+  isCompleted: boolean;
+  isCurrent: boolean;
+}
+
 // Normalized NBFC shape from the API
 interface NbfcNormalized {
   statusCode: string;
   statusLabel: string;
   activeLender: string;
   userMessage: string;
+  guidanceMessage?: string;
+  cadenceStep?: number;
+  cadenceStages?: CadenceStageItem[];
   callToAction: {
     label: string;
     action: string;
@@ -79,6 +93,7 @@ export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
   const [nbfcData, setNbfcData] = useState<NbfcNormalized | null>(null);
   const [isLoadingNbfc, setIsLoadingNbfc] = useState(false);
   const [nbfcError, setNbfcError] = useState<string | null>(null);
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   // Keep a stable ref for onUpdateJourney to prevent re-triggering effects
   const onUpdateJourneyRef = useRef(onUpdateJourney);
@@ -89,10 +104,13 @@ export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
   // Derive display values from live NBFC data, falling back to journey state
   const lenderName = nbfcData?.activeLender || financing?.lenderName || 'Finance partner is being assigned';
   const status = (nbfcData?.statusCode || financing?.status || 'UNDER_REVIEW') as string;
-  const activeNbfcChild = nbfcData?.allNbfcs?.find((n) => n.isActive && n.facilityAmount > 0) || nbfcData?.allNbfcs?.find((n) => n.facilityAmount > 0) || nbfcData?.allNbfcs?.[0];
-  const masterFacilityAmount = activeNbfcChild?.facilityAmount || financing?.appliedAmount || 0;
-  const appliedAmount = masterFacilityAmount;
-  const facilityAmountText = appliedAmount > 0 ? `₹${appliedAmount.toLocaleString('en-IN')}` : 'N/A';
+  const currentCadenceStep = nbfcData?.cadenceStep || (
+    status === 'DISBURSED' ? 5 :
+    status === 'EMI_SETUP_COMPLETED' || status === 'EMI_SETUP_PENDING' ? 4 :
+    status === 'APPROVED' ? 3 :
+    status === 'UNDER_REVIEW' || status === 'DOCUMENTS_REQUIRED' ? 2 :
+    1
+  );
 
   // Fetch latest NBFC status from Salesforce (via normalized endpoint)
   const fetchLatestNbfcStatus = useCallback(async (isSilent = false) => {
@@ -120,7 +138,6 @@ export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
   // 2-Stage Sync Policy on portal load:
   // 1st sync runs immediately on mount
   // 2nd sync runs after 2 seconds to capture/lock-in updated Salesforce status
-  // No second-by-second continuous loop
   useEffect(() => {
     let secondSyncTimer: NodeJS.Timeout;
 
@@ -143,7 +160,6 @@ export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
     };
   }, [token, fetchLatestNbfcStatus]);
 
-
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSupportModal, setShowSupportModal] = useState(false);
   const [ticketCategory, setTicketCategory] = useState('Financing Application Assistance');
@@ -151,7 +167,6 @@ export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
     'Need help with auto-debit setup and document status.'
   );
   const [ticketSuccessMsg, setTicketSuccessMsg] = useState<string | null>(null);
-
 
   // Trigger NBFC Actions
   const handleNbfcAction = async (
@@ -167,37 +182,36 @@ export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
       const data = await res.json();
       if (res.ok && data.journey) {
         onUpdateJourney(data.journey);
+        await fetchLatestNbfcStatus(true);
+        if (actionType === 'CHANGE_CO_APPLICANT') {
+          onSwitchCoApplicant();
+        } else if (actionType === 'DISBURSE_SIMULATE') {
+          onComplete();
+        }
       }
     } catch (err) {
-      console.error('Failed NBFC action:', err);
+      console.error('Error triggering NBFC action:', err);
     } finally {
       setIsProcessing(false);
     }
   };
 
-  // Submit Support Ticket
+  // Support Ticket Form Submit
   const handleCreateTicket = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsProcessing(true);
     try {
-      const res = await fetch(`/api/enrollment/${token}/support-ticket`, {
+      await fetch(`/api/enrollment/${token}/support-ticket`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           category: ticketCategory,
           description: ticketDescription,
-          learnerName: state.learner?.name || 'Learner',
-          contactNumber: state.learner?.mobileMasked || '',
+          learnerName: state.learner.name,
+          contactNumber: state.learner.mobileMasked,
         }),
       });
-      const data = await res.json();
-      setTicketSuccessMsg(data.message || 'Ticket created successfully.');
-      setTimeout(() => {
-        setShowSupportModal(false);
-        setTicketSuccessMsg(null);
-      }, 3500);
-    } catch {
-      setTicketSuccessMsg('Ticket logged. Our counselor team will call you shortly.');
+      setTicketSuccessMsg('Ticket logged. Our admissions counselor will call you shortly.');
       setTimeout(() => {
         setShowSupportModal(false);
         setTicketSuccessMsg(null);
@@ -207,50 +221,61 @@ export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
     }
   };
 
-  // Timeline Steps
-  const timelineSteps = [
+  // 5-Step Financing Cadence Lifecycle
+  const cadenceStages: CadenceStageItem[] = nbfcData?.cadenceStages || [
     {
-      id: 'app_submitted',
-      label: 'Application Submitted',
-      date: 'Instant',
-      isCompleted: true,
-      isCurrent: false,
+      step: 1,
+      name: 'Application & Consent',
+      description: 'Educational EMI application initiated & consent link sent to co-applicant',
+      isCompleted: currentCadenceStep > 1 && status !== 'REJECTED',
+      isCurrent: currentCadenceStep === 1 && status !== 'REJECTED',
     },
     {
-      id: 'kyc_verified',
-      label: 'KYC & Identity Verified',
-      date: 'Completed',
-      isCompleted: true,
-      isCurrent: false,
+      step: 2,
+      name: 'Document & Credit Review',
+      description: 'Lender underwriting team reviews KYC, income details & credit bureau score',
+      isCompleted: currentCadenceStep > 2 && status !== 'REJECTED',
+      isCurrent: currentCadenceStep === 2 && status !== 'REJECTED',
     },
     {
-      id: 'underwriting',
-      label: 'Lender Credit Review',
-      date: status === 'REJECTED' ? 'Rejected' : 'Completed',
-      isCompleted: status === 'APPROVED' || status === 'EMI_SETUP_PENDING' || status === 'DISBURSED',
-      isCurrent: status === 'UNDER_REVIEW',
-      isError: status === 'REJECTED',
+      step: 3,
+      name: 'Sanction & Video KYC',
+      description: 'Loan sanctioned, digital agreement signing & quick Video KYC (if applicable)',
+      isCompleted: currentCadenceStep > 3 && status !== 'REJECTED',
+      isCurrent: currentCadenceStep === 3 && status !== 'REJECTED',
     },
     {
-      id: 'approval',
-      label: 'Sanction & Loan Approval',
-      date: status === 'APPROVED' || status === 'EMI_SETUP_PENDING' || status === 'DISBURSED' ? 'Sanctioned' : 'Pending',
-      isCompleted: status === 'APPROVED' || status === 'EMI_SETUP_PENDING' || status === 'DISBURSED',
-      isCurrent: status === 'APPROVED',
+      step: 4,
+      name: 'Auto-Debit (e-NACH) Setup',
+      description: 'Our NBFC partner will connect with you to register monthly auto-debit (0% interest)',
+      isCompleted: currentCadenceStep > 4 && status !== 'REJECTED',
+      isCurrent: currentCadenceStep === 4 && status !== 'REJECTED',
     },
     {
-      id: 'auto_debit',
-      label: 'Auto-Debit (e-NACH Mandate)',
-      date: status === 'DISBURSED' ? 'Configured' : status === 'EMI_SETUP_PENDING' ? 'Action Needed' : 'Upcoming',
-      isCompleted: status === 'DISBURSED',
-      isCurrent: status === 'EMI_SETUP_PENDING',
+      step: 5,
+      name: 'Disbursement & Class Access',
+      description: 'Facility disbursed directly to NxtWave and Genius LMS portal unlocked',
+      isCompleted: currentCadenceStep === 5,
+      isCurrent: currentCadenceStep === 5,
+    },
+  ];
+
+  const faqs = [
+    {
+      q: 'How does the 0% No-Cost EMI work?',
+      a: 'NxtWave subvents the interest directly with the lending partner so you only pay the exact program fee in equal monthly installments without any hidden interest charges or upfront processing fees.',
     },
     {
-      id: 'disbursal',
-      label: 'Loan Disbursal to NxtWave',
-      date: status === 'DISBURSED' ? 'Disbursed' : 'Awaiting mandate',
-      isCompleted: status === 'DISBURSED',
-      isCurrent: status === 'DISBURSED',
+      q: 'Why is a Co-Applicant required?',
+      a: 'As students are currently focusing on their education, RBI-approved lending partners require a salaried or self-employed parent, guardian, or earning sibling to act as the primary co-applicant for auto-debit registration.',
+    },
+    {
+      q: 'What is an e-NACH Auto-Debit Mandate?',
+      a: 'e-NACH is a secure, RBI-mandated digital banking authorization that allows your monthly EMI to be automatically debited from your co-applicant’s bank account on a fixed date each month.',
+    },
+    {
+      q: 'When will my program classes unlock?',
+      a: 'Your learning portal and curriculum classes unlock automatically as soon as your auto-debit mandate is confirmed and the partner lender issues the sanction.',
     },
   ];
 
@@ -277,38 +302,27 @@ export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
           Financing Application Status
         </h1>
         <p className="text-sm text-slate-600 leading-relaxed mb-6">
-          Track the live underwriting, approval, and auto-debit setup for your educational facility.
+          Track the step-by-step underwriting, verification, and auto-debit setup for your educational facility.
         </p>
 
-        {/* LENDER METADATA & FINANCIAL SUMMARY */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 rounded-xl bg-slate-50 border border-slate-200 mb-6 text-left">
-          <div>
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-              Application Ref
-            </span>
-            <span className="text-xs font-mono font-bold text-slate-800">
-              {activeNbfcChild?.appId || financing?.applicationId || 'N/A'}
-            </span>
+        {/* 0% NO-COST EMI BENEFIT BANNER */}
+        <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 sm:p-4 rounded-xl bg-emerald-50/70 border border-emerald-200/80 mb-6 text-left">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+              <ShieldCheck className="w-4 h-4" />
+            </div>
+            <div>
+              <span className="text-xs font-bold text-emerald-900 block">0% Interest No-Cost Educational EMI</span>
+              <span className="text-[11px] text-emerald-700">Zero hidden fees • Subsidized by NxtWave • Equal monthly installments</span>
+            </div>
           </div>
-          <div>
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-              Facility Amount
-            </span>
-            <span className="text-xs font-mono font-bold text-slate-800">
-              {facilityAmountText}
-            </span>
-          </div>
-          <div>
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-              Interest Cost
-            </span>
-            <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded inline-block">
-              0% (No-Cost)
-            </span>
+          <div className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-800 bg-white/80 px-2.5 py-1 rounded-full border border-emerald-200">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+            <span>0% Extra Charges</span>
           </div>
         </div>
 
-        {/* ---- LIVE NBFC STATUS (Salesforce normalized) ---- */}
+        {/* ---- LIVE NBFC STATUS CARD ---- */}
 
         {/* Loading state */}
         {isLoadingNbfc && !nbfcData && (
@@ -326,7 +340,7 @@ export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
               <p className="text-sm text-red-700 font-medium">{nbfcError}</p>
               <button
                 type="button"
-                onClick={fetchLatestNbfcStatus}
+                onClick={() => fetchLatestNbfcStatus(false)}
                 className="mt-2 text-xs font-semibold text-red-600 underline"
               >
                 Try again
@@ -335,51 +349,101 @@ export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
           </div>
         )}
 
-        {/* Normalized status card — rendered when we have live Salesforce data */}
+        {/* Dynamic Status & Guidance Card */}
         {nbfcData && (
-          <div className={`p-4 rounded-xl border mb-6 text-left ${
-            nbfcData.statusCode === 'DISBURSED' ? 'bg-emerald-50 border-emerald-200' :
-            nbfcData.statusCode === 'APPROVED' ? 'bg-green-50 border-green-200' :
-            nbfcData.statusCode === 'EMI_SETUP_COMPLETED' ? 'bg-blue-50 border-blue-200' :
-            nbfcData.statusCode === 'DOCUMENTS_REQUIRED' ? 'bg-amber-50 border-amber-200' :
-            nbfcData.statusCode === 'REJECTED' ? 'bg-orange-50 border-orange-200' :
-            'bg-slate-50 border-slate-200'
+          <div className={`p-5 rounded-2xl border mb-6 text-left ${
+            nbfcData.statusCode === 'DISBURSED' ? 'bg-emerald-50/70 border-emerald-200' :
+            nbfcData.statusCode === 'APPROVED' ? 'bg-green-50/70 border-green-200' :
+            nbfcData.statusCode === 'EMI_SETUP_COMPLETED' ? 'bg-blue-50/70 border-blue-200' :
+            nbfcData.statusCode === 'DOCUMENTS_REQUIRED' ? 'bg-amber-50/70 border-amber-200' :
+            nbfcData.statusCode === 'REJECTED' ? 'bg-orange-50/70 border-orange-200' :
+            'bg-slate-50/80 border-slate-200'
           }`}>
-            <div className="flex items-start gap-3">
-              <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+            <div className="flex items-start gap-3.5">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
                 nbfcData.statusCode === 'DISBURSED' ? 'bg-emerald-100 text-emerald-700' :
                 nbfcData.statusCode === 'APPROVED' ? 'bg-green-100 text-green-700' :
                 nbfcData.statusCode === 'EMI_SETUP_COMPLETED' ? 'bg-blue-100 text-blue-700' :
                 nbfcData.statusCode === 'DOCUMENTS_REQUIRED' ? 'bg-amber-100 text-amber-700' :
                 nbfcData.statusCode === 'REJECTED' ? 'bg-orange-100 text-orange-700' :
-                'bg-slate-100 text-slate-600'
+                'bg-blue-100 text-[#0B63E5]'
               }`}>
-                {nbfcData.statusCode === 'DISBURSED' ? <Sparkles className="w-4 h-4" /> :
-                 nbfcData.statusCode === 'APPROVED' ? <CheckCircle2 className="w-4 h-4" /> :
-                 nbfcData.statusCode === 'EMI_SETUP_COMPLETED' ? <Clock className="w-4 h-4" /> :
-                 nbfcData.statusCode === 'DOCUMENTS_REQUIRED' ? <AlertTriangle className="w-4 h-4" /> :
-                 nbfcData.statusCode === 'REJECTED' ? <RefreshCw className="w-4 h-4" /> :
-                 <Clock className="w-4 h-4" />}
+                {nbfcData.statusCode === 'DISBURSED' ? <Sparkles className="w-5 h-5" /> :
+                 nbfcData.statusCode === 'APPROVED' ? <CheckCircle2 className="w-5 h-5" /> :
+                 nbfcData.statusCode === 'EMI_SETUP_COMPLETED' ? <CheckCircle2 className="w-5 h-5" /> :
+                 nbfcData.statusCode === 'DOCUMENTS_REQUIRED' ? <AlertTriangle className="w-5 h-5" /> :
+                 nbfcData.statusCode === 'REJECTED' ? <RefreshCw className="w-5 h-5" /> :
+                 <Clock className="w-5 h-5" />}
               </div>
               <div className="flex-1 min-w-0">
-                <span className={`text-[11px] font-bold uppercase tracking-wider ${
-                  nbfcData.statusCode === 'DISBURSED' ? 'text-emerald-700' :
-                  nbfcData.statusCode === 'APPROVED' ? 'text-green-700' :
-                  nbfcData.statusCode === 'EMI_SETUP_COMPLETED' ? 'text-blue-700' :
-                  nbfcData.statusCode === 'DOCUMENTS_REQUIRED' ? 'text-amber-700' :
-                  nbfcData.statusCode === 'REJECTED' ? 'text-orange-700' :
-                  'text-slate-600'
-                }`}>
-                  {nbfcData.statusLabel}
-                </span>
-                <p className="text-sm text-slate-700 mt-1 leading-relaxed">{nbfcData.userMessage}</p>
+                <div className="flex items-center justify-between gap-2">
+                  <span className={`text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
+                    nbfcData.statusCode === 'DISBURSED' ? 'bg-emerald-100 text-emerald-800' :
+                    nbfcData.statusCode === 'APPROVED' ? 'bg-green-100 text-green-800' :
+                    nbfcData.statusCode === 'EMI_SETUP_COMPLETED' ? 'bg-blue-100 text-blue-800' :
+                    nbfcData.statusCode === 'DOCUMENTS_REQUIRED' ? 'bg-amber-100 text-amber-800' :
+                    nbfcData.statusCode === 'REJECTED' ? 'bg-orange-100 text-orange-800' :
+                    'bg-slate-200 text-slate-800'
+                  }`}>
+                    {nbfcData.statusLabel}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => fetchLatestNbfcStatus(false)}
+                    disabled={isLoadingNbfc}
+                    title="Refresh status"
+                    className="p-1 rounded hover:bg-black/5 transition-colors disabled:opacity-50 shrink-0 text-slate-400 hover:text-slate-600"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isLoadingNbfc ? 'animate-spin' : ''}`} />
+                  </button>
+                </div>
+
+                <p className="text-sm font-medium text-slate-900 mt-2 leading-snug">
+                  {nbfcData.userMessage}
+                </p>
+
+                {nbfcData.guidanceMessage && (
+                  <p className="text-xs text-slate-600 mt-1.5 leading-relaxed bg-white/70 p-2.5 rounded-lg border border-slate-200/60">
+                    💡 <strong className="text-slate-800">What to expect:</strong> {nbfcData.guidanceMessage}
+                  </p>
+                )}
+
                 {nbfcData.classAccessEta && (
-                  <div className="flex items-center gap-1.5 mt-2">
+                  <div className="flex items-center gap-1.5 mt-2.5">
                     <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                    <span className="text-xs text-slate-500">Class Access: {nbfcData.classAccessEta}</span>
+                    <span className="text-xs text-slate-500 font-medium">
+                      {nbfcData.classAccessEta.startsWith('In 2-3 days')
+                        ? nbfcData.classAccessEta
+                        : `Estimated Access: ${nbfcData.classAccessEta}`}
+                    </span>
                   </div>
                 )}
-                {/* CTA from normalized data */}
+
+                {/* Team will connect callout for DOCUMENTS_REQUIRED */}
+                {nbfcData.statusCode === 'DOCUMENTS_REQUIRED' && (
+                  <div className="flex items-center gap-2.5 mt-3.5 p-3 rounded-xl bg-amber-100/90 border border-amber-300 text-amber-950 text-xs font-semibold">
+                    <PhoneCall className="w-4 h-4 text-amber-700 shrink-0" />
+                    <span>Our Team will connect with you for additional docs</span>
+                  </div>
+                )}
+
+                {/* Team will connect callout for APPROVED / EMI_SETUP */}
+                {(nbfcData.statusCode === 'APPROVED' || nbfcData.statusCode === 'EMI_SETUP_PENDING') && (
+                  <div className="flex items-center gap-2.5 mt-3.5 p-3 rounded-xl bg-emerald-100/90 border border-emerald-300 text-emerald-950 text-xs font-semibold">
+                    <PhoneCall className="w-4 h-4 text-emerald-700 shrink-0" />
+                    <span>Our NBFC partner will connect with you to set up auto-debit</span>
+                  </div>
+                )}
+
+                {/* Completion notice for EMI_SETUP_COMPLETED */}
+                {nbfcData.statusCode === 'EMI_SETUP_COMPLETED' && (
+                  <div className="flex items-center gap-2.5 mt-3.5 p-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-950 text-xs font-semibold">
+                    <Clock className="w-4 h-4 text-[#0B63E5] shrink-0" />
+                    <span>In 2-3 days we will complete the class access</span>
+                  </div>
+                )}
+
+                {/* Primary CTA */}
                 {nbfcData.callToAction && nbfcData.callToAction.action !== 'REFRESH' && nbfcData.callToAction.action !== 'NONE' && (
                   <button
                     type="button"
@@ -389,50 +453,39 @@ export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
                       else if (nbfcData.callToAction?.action === 'RETRY_DOCUMENTS') handleNbfcAction('RETRY_DOCUMENTS');
                       else if (nbfcData.callToAction?.action === 'CHANGE_CO_APPLICANT') onSwitchCoApplicant();
                     }}
-                    className={`mt-3 px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+                    className={`mt-3 px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
                       nbfcData.callToAction.primary
-                        ? 'bg-[#0B63E5] text-white hover:bg-blue-600'
-                        : 'border border-slate-300 text-slate-700 hover:bg-slate-50'
+                        ? 'bg-[#0B63E5] text-white hover:bg-blue-600 shadow-xs'
+                        : 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
                     }`}
                   >
-                    {nbfcData.callToAction.label}
+                    <span>{nbfcData.callToAction.label}</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 )}
               </div>
-              {/* Refresh button */}
-              <button
-                type="button"
-                onClick={fetchLatestNbfcStatus}
-                disabled={isLoadingNbfc}
-                title="Refresh status"
-                className="p-1.5 rounded-lg hover:bg-black/10 transition-colors disabled:opacity-50 shrink-0"
-              >
-                <RefreshCw className={`w-4 h-4 text-slate-500 ${isLoadingNbfc ? 'animate-spin' : ''}`} />
-              </button>
             </div>
           </div>
         )}
 
         {/* -------------------------------------------------------------
-            STAGE CALLOUT BANNERS
+            STAGE CALLOUT BANNERS FOR SPECIFIC ACTIONS
             ------------------------------------------------------------- */}
 
         {/* 1. REJECTED STATE */}
         {status === 'REJECTED' && (
-
           <div className="mb-6">
             <ActionRequiredCard
-              title="Lender Credit Review Not Approved"
+              title="Alternate Financing Evaluation in Progress"
               description={
                 financing?.rejectionReason ||
-                'Co-applicant credit bureau score is below the minimum threshold required by this partner lender.'
+                'The initial partner criteria could not be cleared. Our finance desk is exploring alternate RBI-approved lending partners for your enrollment.'
               }
               actionLabel="Nominate Alternate Co-Applicant"
               onAction={onSwitchCoApplicant}
             />
 
-            <div className="flex flex-wrap gap-2 text-xs">
+            <div className="flex flex-wrap gap-2 text-xs mt-3">
               <button
                 type="button"
                 onClick={onSwitchToDirectPay}
@@ -451,9 +504,9 @@ export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
           </div>
         )}
 
-        {/* 2. APPROVED / EMI SETUP PENDING */}
+        {/* 2. APPROVED / MANDATE SETUP PENDING */}
         {(status === 'APPROVED' || status === 'EMI_SETUP_PENDING') && (
-          <div className="p-5 rounded-2xl bg-emerald-50 border border-emerald-200 mb-6 text-left space-y-3">
+          <div className="p-5 rounded-2xl bg-emerald-50/70 border border-emerald-200 mb-6 text-left space-y-3">
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
                 <CheckCircle2 className="w-5 h-5" />
@@ -463,209 +516,133 @@ export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
                   Loan Approved
                 </span>
                 <h3 className="text-base font-bold text-emerald-950 mt-1">
-                  Complete Auto-Debit (e-NACH Mandate)
+                  Auto-Debit (e-NACH Mandate) Setup
                 </h3>
                 <p className="text-xs text-emerald-800 mt-1 leading-relaxed">
-                  Your education financing of ₹{appliedAmount.toLocaleString('en-IN')} is approved. Set up auto-debit using Net Banking or Debit Card to trigger immediate disbursement.
+                  Your 0% interest educational financing is approved by {lenderName}. Our NBFC partner will connect with you to complete the auto-debit setup.
                 </p>
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2 pt-1">
-              <button
-                type="button"
-                onClick={() => handleNbfcAction('SETUP_EMI')}
-                disabled={isProcessing}
-                className="px-5 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold shadow-xs cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
-              >
-                {isProcessing ? (
-                  <>
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    <span>Configuring Mandate...</span>
-                  </>
-                ) : (
-                  <>
-                    <FileCheck className="w-3.5 h-3.5" />
-                    <span>Authorize e-NACH Mandate</span>
-                  </>
-                )}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleNbfcAction('DISBURSE_SIMULATE')}
-                disabled={isProcessing}
-                className="px-3.5 py-2 rounded-xl bg-white border border-emerald-300 text-emerald-800 text-xs font-semibold hover:bg-emerald-100/60 cursor-pointer"
-              >
-                Simulate Disbursal &amp; Unlock Classes
-              </button>
+            <div className="flex items-center gap-2.5 p-3 rounded-xl bg-white/90 border border-emerald-300/80 text-emerald-950 text-xs font-semibold">
+              <PhoneCall className="w-4 h-4 text-emerald-700 shrink-0" />
+              <span>Our NBFC partner will connect with you to set up auto-debit</span>
             </div>
           </div>
         )}
 
-        {/* 3. UNDER REVIEW */}
-        {status === 'UNDER_REVIEW' && (
-          <div className="p-5 rounded-2xl bg-blue-50 border border-blue-200 mb-6 text-left">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center shrink-0">
-                <Clock className="w-5 h-5 animate-spin" />
-              </div>
-              <div className="flex-1">
-                <span className="text-[11px] font-bold text-blue-800 uppercase tracking-wider bg-blue-200/60 px-2 py-0.5 rounded-md border border-blue-300">
-                  Underwriting In Progress
-                </span>
-                <h3 className="text-base font-bold text-[#0A192F] mt-1">
-                  Application Under Review by {lenderName}
-                </h3>
-                <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                  The credit underwriting desk is evaluating income records and credit score. Updates will be reflected automatically.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* 4. DISBURSED */}
-        {status === 'DISBURSED' && (
-          <div className="p-5 rounded-2xl bg-emerald-50 border border-emerald-200 mb-6 text-left">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-                <CheckCircle2 className="w-5 h-5" />
-              </div>
-              <div className="flex-1">
-                <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider bg-emerald-200/60 px-2 py-0.5 rounded-md border border-emerald-300">
-                  Loan Disbursed
-                </span>
-                <h3 className="text-base font-bold text-emerald-950 mt-1">
-                  Enrollment Fully Funded
-                </h3>
-                <p className="text-xs text-emerald-800 mt-1 leading-relaxed">
-                  ₹{appliedAmount.toLocaleString('en-IN')} disbursed directly to NxtWave Disruptive Technologies. Your learner access is ready to activate.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* MULTIPLE NBFC APPLICATIONS & CO-APPLICANTS DISPLAY */}
-        {nbfcData?.allNbfcs && nbfcData.allNbfcs.length > 0 && (
-          <div className="border border-slate-200 rounded-xl p-5 mb-6 text-left bg-slate-50/60">
-            <div className="flex items-center justify-between mb-3 border-b border-slate-200 pb-2">
-              <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
-                <Building2 className="w-4 h-4 text-[#0B63E5]" />
-                <span>Financing Applications & Partners ({nbfcData.allNbfcs.length})</span>
+        {/* -------------------------------------------------------------
+            5-STAGE GENERIC NBFC CADENCE ROADMAP
+            ------------------------------------------------------------- */}
+        <div className="border border-slate-200 rounded-2xl p-5 sm:p-6 mb-6 text-left bg-white shadow-xs">
+          <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+            <div>
+              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                <span>Financing Cadence &amp; Progression</span>
               </h3>
-              <span className="text-[10px] text-slate-500 font-mono">SOQL Linked Records</span>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                Standard 5-stage educational loan journey with our partner lenders
+              </p>
             </div>
+            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-[#0B63E5] border border-blue-100">
+              Stage {currentCadenceStep} of 5
+            </span>
+          </div>
 
-            <div className="space-y-3">
-              {nbfcData.allNbfcs.map((item) => (
-                <div
-                  key={item.id}
-                  className={`p-3.5 rounded-xl border transition-all ${
-                    item.isActive
-                      ? 'bg-white border-[#0B63E5] ring-2 ring-blue-100 shadow-xs'
-                      : 'bg-white/80 border-slate-200 text-slate-600'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-1.5">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-xs text-slate-900">{item.nbfcName}</span>
-                      {item.isActive ? (
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 font-bold border border-blue-200">
-                          Active Primary Journey
-                        </span>
-                      ) : (
-                        <span className="text-[10px] px-2 py-0.5 rounded bg-slate-100 text-slate-500 font-medium">
-                          Linked Application
-                        </span>
-                      )}
-                    </div>
-                    {item.facilityAmount > 0 && (
-                      <span className="text-xs font-bold text-emerald-700 font-mono">
-                        Facility Amount: {item.facilityAmountFormatted}
-                      </span>
+          <div className="space-y-4">
+            {cadenceStages.map((stage) => {
+              const isPast = stage.isCompleted;
+              const isCurrent = stage.isCurrent;
+              const isFuture = !isPast && !isCurrent;
+
+              return (
+                <div key={stage.step} className="flex items-start gap-3.5 relative">
+                  {/* Vertical connecting line */}
+                  {stage.step < cadenceStages.length && (
+                    <div
+                      className={`absolute left-[15px] top-8 bottom-[-16px] w-0.5 ${
+                        isPast ? 'bg-emerald-500' : 'bg-slate-200'
+                      }`}
+                    />
+                  )}
+
+                  {/* Icon Indicator */}
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 z-10 transition-colors ${
+                      isPast
+                        ? 'bg-emerald-500 text-white'
+                        : isCurrent
+                        ? 'bg-[#0B63E5] text-white ring-4 ring-blue-100 animate-pulse'
+                        : 'bg-slate-100 text-slate-400 border border-slate-200'
+                    }`}
+                  >
+                    {isPast ? (
+                      <CheckCircle2 className="w-4 h-4" />
+                    ) : isCurrent ? (
+                      <Clock className="w-4 h-4" />
+                    ) : (
+                      <span className="text-xs font-bold font-mono">{stage.step}</span>
                     )}
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-mono text-slate-600 mt-2 pt-2 border-t border-slate-100">
-                    <div>
-                      <span className="text-slate-400 font-sans">Master App ID:</span>{' '}
-                      <strong>{item.appId || 'N/A'}</strong>
+                  {/* Content */}
+                  <div className="flex-1 pb-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className={`text-xs font-bold ${
+                        isPast ? 'text-slate-900' :
+                        isCurrent ? 'text-[#0B63E5]' :
+                        'text-slate-500'
+                      }`}>
+                        Stage {stage.step}: {stage.name}
+                      </span>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        isPast ? 'bg-emerald-50 text-emerald-700' :
+                        isCurrent ? 'bg-blue-50 text-[#0B63E5] border border-blue-200 font-semibold' :
+                        'bg-slate-100 text-slate-400'
+                      }`}>
+                        {isPast ? 'Completed' : isCurrent ? 'In Progress' : 'Upcoming'}
+                      </span>
                     </div>
-                    {item.coApplicantName && (
-                      <div>
-                        <span className="text-slate-400 font-sans">Co-Applicant:</span>{' '}
-                        <strong>
-                          {item.coApplicantName} ({item.coApplicantPhone || 'N/A'})
-                        </strong>
-                      </div>
-                    )}
+                    <p className={`text-[11px] mt-0.5 leading-relaxed ${
+                      isCurrent ? 'text-slate-700 font-medium' : 'text-slate-500'
+                    }`}>
+                      {stage.description}
+                    </p>
                   </div>
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
-        )}
+        </div>
 
-        {/* VERTICAL TIMELINE */}
-        <div className="border border-slate-200 rounded-xl p-5 mb-8 text-left bg-white">
-          <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-4">
-            Application Progress Timeline
+        {/* FAQ & CADENCE GUIDANCE ACCORDION */}
+        <div className="border border-slate-200 rounded-2xl p-5 mb-6 text-left bg-slate-50/50">
+          <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+            <Info className="w-3.5 h-3.5 text-[#0B63E5]" />
+            <span>Understanding Educational Financing &amp; Flow</span>
           </h3>
-          <div className="space-y-4">
-            {timelineSteps.map((step, idx) => (
-              <div key={step.id} className="flex items-start gap-3 relative">
-                {/* Connecting vertical bar */}
-                {idx < timelineSteps.length - 1 && (
-                  <div
-                    className={`absolute left-[13px] top-6 bottom-0 w-0.5 ${
-                      step.isCompleted ? 'bg-emerald-500' : 'bg-slate-200'
-                    }`}
-                  />
-                )}
 
-                {/* Step indicator dot */}
-                <div
-                  className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 z-10 ${
-                    step.isError
-                      ? 'bg-rose-100 text-rose-600 border border-rose-300'
-                      : step.isCompleted
-                      ? 'bg-emerald-500 text-white'
-                      : step.isCurrent
-                      ? 'bg-[#0B63E5] text-white animate-pulse'
-                      : 'bg-slate-100 text-slate-400 border border-slate-200'
-                  }`}
-                >
-                  {step.isError ? (
-                    <XCircle className="w-3.5 h-3.5" />
-                  ) : step.isCompleted ? (
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                  ) : (
-                    <span className="text-[10px] font-bold">{idx + 1}</span>
+          <div className="space-y-2">
+            {faqs.map((faq, index) => {
+              const isOpen = openFaq === index;
+              return (
+                <div key={index} className="border border-slate-200/80 rounded-xl bg-white overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setOpenFaq(isOpen ? null : index)}
+                    className="w-full p-3 text-left flex items-center justify-between text-xs font-semibold text-slate-800 hover:bg-slate-50/80 transition-colors cursor-pointer"
+                  >
+                    <span>{faq.q}</span>
+                    {isOpen ? <ChevronUp className="w-4 h-4 text-slate-400 shrink-0" /> : <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />}
+                  </button>
+                  {isOpen && (
+                    <div className="px-3 pb-3 text-[11px] text-slate-600 leading-relaxed border-t border-slate-100 pt-2 bg-slate-50/30">
+                      {faq.a}
+                    </div>
                   )}
                 </div>
-
-                <div className="flex-1 pb-2">
-                  <div className="flex items-center justify-between">
-                    <span
-                      className={`text-xs font-bold ${
-                        step.isError
-                          ? 'text-rose-700'
-                          : step.isCompleted || step.isCurrent
-                          ? 'text-slate-900'
-                          : 'text-slate-500'
-                      }`}
-                    >
-                      {step.label}
-                    </span>
-                    <span className="text-[11px] text-slate-400 font-mono">
-                      {step.date}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
@@ -750,15 +727,15 @@ export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
                   Message / Details
                 </label>
                 <textarea
-                  rows={3}
                   value={ticketDescription}
                   onChange={(e) => setTicketDescription(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-slate-300 text-xs outline-none focus:border-[#0B63E5]"
+                  rows={3}
+                  className="w-full p-2.5 rounded-xl border border-slate-300 text-xs bg-white outline-none focus:border-[#0B63E5]"
                 />
               </div>
 
               {ticketSuccessMsg && (
-                <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs">
+                <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold">
                   {ticketSuccessMsg}
                 </div>
               )}
@@ -774,9 +751,9 @@ export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
                 <button
                   type="submit"
                   disabled={isProcessing}
-                  className="px-4 py-2 rounded-xl bg-[#0B63E5] hover:bg-blue-600 text-white text-xs font-semibold shadow-xs cursor-pointer disabled:opacity-50"
+                  className="px-4 py-2 rounded-xl bg-[#0B63E5] text-white text-xs font-semibold hover:bg-blue-600 disabled:opacity-50 cursor-pointer"
                 >
-                  {isProcessing ? 'Logging...' : 'Submit Request'}
+                  {isProcessing ? 'Submitting...' : 'Submit Request'}
                 </button>
               </div>
             </form>

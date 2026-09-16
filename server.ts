@@ -78,34 +78,38 @@ app.get('/api/enrollment/:token/journey', async (req, res) => {
         );
       }
       if (nbfcRecords && nbfcRecords.length > 0) {
+        const accountSpecific = nbfcRecords.filter((c: any) => c.Academy_Onboarding_PRE_L__c === record.Id);
+        const candidates = accountSpecific.length > 0 ? accountSpecific : nbfcRecords;
+
         const activeChild =
-          nbfcRecords.find(
-            (c: any) => c.Academy_Onboarding_PRE_L__c === record.Id && Number(c.Master_Applied_Loan_Amount__c) > 0
-          ) ||
-          nbfcRecords.find((c: any) => Number(c.Master_Applied_Loan_Amount__c) > 0) ||
-          nbfcRecords[0];
+          candidates.find(
+            (c: any) => Number(c.Master_Applied_Loan_Amount__c) > 0
+          ) || candidates[0];
 
         if (activeChild) {
           const appliedAmt = Number(activeChild.Master_Applied_Loan_Amount__c || activeChild.Master_Approved_Loan_Amount__c || 0);
-          if (appliedAmt > 0) {
-            if (!journey.financing) {
-              journey.financing = {
-                applied: true,
-                appliedAmount: appliedAmt,
-                nbfcName: activeChild.Name || 'NORTHERN ARC',
-                applicationId: activeChild.Master_App_ID__c || `NBFC-${record.Id.slice(-6).toUpperCase()}`,
-                status: 'UNDER_REVIEW',
-                statusLabel: 'Under Review',
-                approvedAmount: Number(activeChild.Master_Approved_Loan_Amount__c || appliedAmt),
-                approvedTenure: '6 Months',
-                emiAmountMonthly: 0,
-                emiTenure: '6 Months',
-              };
-            } else {
+          if (!journey.financing) {
+            journey.financing = {
+              applied: true,
+              appliedAmount: appliedAmt || journey.program?.amountPayable || 0,
+              nbfcName: activeChild.Name || 'NORTHERN ARC',
+              applicationId: activeChild.Master_App_ID__c || `NBFC-${record.Id.slice(-6).toUpperCase()}`,
+              status: 'UNDER_REVIEW',
+              statusLabel: 'Under Review',
+              approvedAmount: Number(activeChild.Master_Approved_Loan_Amount__c || appliedAmt || journey.program?.amountPayable || 0),
+              approvedTenure: '6 Months',
+              emiAmountMonthly: 0,
+              emiTenure: '6 Months',
+            };
+          } else {
+            if (appliedAmt > 0) {
               journey.financing.appliedAmount = appliedAmt;
-              if (activeChild.Master_App_ID__c) {
-                journey.financing.applicationId = activeChild.Master_App_ID__c;
-              }
+            }
+            if (activeChild.Master_App_ID__c) {
+              journey.financing.applicationId = activeChild.Master_App_ID__c;
+            }
+            if (activeChild.Name) {
+              journey.financing.nbfcName = activeChild.Name;
             }
           }
         }
@@ -699,11 +703,10 @@ app.post('/api/enrollment/:token/kyc/action', async (req, res) => {
 app.get('/api/enrollment/:token/nbfc-status', async (req, res) => {
   const { token } = req.params;
   try {
-    const record = await salesforceClient.getRecordByToken(token);
+    const record = await salesforceClient.getAuthoritativeEnrollmentRecord(token);
     if (!record) return res.status(404).json({ error: 'Record not found' });
 
     const journey = mapSalesforceToJourney(record, token);
-    const normalized = normalizeNbfcStatus(record as any);
 
     // Query related child NBFC records (Supabase DB or Salesforce REST API)
     let nbfcChildRecords: any[] = [];
@@ -720,7 +723,15 @@ app.get('/api/enrollment/:token/nbfc-status', async (req, res) => {
       );
     }
 
-    const allNbfcs = nbfcChildRecords.map((c: any) => {
+    // Isolate records belonging to this specific account lead so other leads sharing the phone number do not pollute
+    const accountSpecificRecords = (nbfcChildRecords || []).filter((c: any) => c.Academy_Onboarding_PRE_L__c === record.Id);
+    const candidateRecords = accountSpecificRecords.length > 0 ? accountSpecificRecords : (nbfcChildRecords || []);
+
+    const activeRawChild = candidateRecords[0] || null;
+
+    const normalized = normalizeNbfcStatus(record as any, activeRawChild);
+
+    const allNbfcs = candidateRecords.map((c: any) => {
       const facilityAmountVal = c.Master_Applied_Loan_Amount__c || c.Master_Approved_Loan_Amount__c || '0';
       return {
         id: c.Id,
@@ -739,28 +750,42 @@ app.get('/api/enrollment/:token/nbfc-status', async (req, res) => {
       };
     });
 
-    // Match active NBFC child record (Query 2 active__c = true) and set appliedAmount to Master_Applied_Loan_Amount__c
+    // Match active NBFC child record
     const activeNbfcChild =
       allNbfcs.find((n) => n.isActive && n.facilityAmount > 0) ||
-      allNbfcs.find((n) => n.facilityAmount > 0);
+      allNbfcs.find((n) => n.isActive) ||
+      allNbfcs.find((n) => n.facilityAmount > 0) ||
+      allNbfcs[0];
 
     if (!journey.financing) {
       journey.financing = {
         applied: true,
-        appliedAmount: activeNbfcChild?.facilityAmount || 0,
-        nbfcName: normalized.activeLender || record.Choose_NBFC_PRE__c || 'NORTHERN ARC',
+        appliedAmount: activeNbfcChild?.facilityAmount || journey.program?.amountPayable || 0,
+        nbfcName: normalized.activeLender || activeNbfcChild?.nbfcName || 'NORTHERN ARC',
         applicationId: activeNbfcChild?.appId || `NBFC-${record.Id.slice(-6).toUpperCase()}`,
         status: normalized.statusCode as any,
         statusLabel: normalized.statusLabel,
-        approvedAmount: activeNbfcChild?.approvedLoanAmount || activeNbfcChild?.facilityAmount || 0,
+        approvedAmount: activeNbfcChild?.approvedLoanAmount || activeNbfcChild?.facilityAmount || journey.program?.amountPayable || 0,
         approvedTenure: '6 Months',
         emiAmountMonthly: 0,
         emiTenure: '6 Months',
         disbursedAmount: record.Disbursed_Amount_PRE__c,
         disbursedAt: record.Disbursed_Date_Time__c,
       };
-    } else if (activeNbfcChild && activeNbfcChild.facilityAmount > 0) {
-      journey.financing.appliedAmount = activeNbfcChild.facilityAmount;
+    } else {
+      if (activeNbfcChild && activeNbfcChild.facilityAmount > 0) {
+        journey.financing.appliedAmount = activeNbfcChild.facilityAmount;
+      }
+      if (normalized.activeLender) {
+        journey.financing.nbfcName = normalized.activeLender;
+      } else if (activeNbfcChild?.nbfcName) {
+        journey.financing.nbfcName = activeNbfcChild.nbfcName;
+      }
+      if (activeNbfcChild?.appId) {
+        journey.financing.applicationId = activeNbfcChild.appId;
+      }
+      journey.financing.status = normalized.statusCode as any;
+      journey.financing.statusLabel = normalized.statusLabel;
     }
 
     return res.json({
@@ -773,6 +798,9 @@ app.get('/api/enrollment/:token/nbfc-status', async (req, res) => {
         statusLabel: normalized.statusLabel,
         activeLender: normalized.activeLender,
         userMessage: normalized.userMessage,
+        guidanceMessage: normalized.guidanceMessage,
+        cadenceStep: normalized.cadenceStep,
+        cadenceStages: normalized.cadenceStages,
         callToAction: normalized.callToAction,
         classAccessEta: normalized.classAccessEta,
         lastUpdated: normalized.lastUpdated,
