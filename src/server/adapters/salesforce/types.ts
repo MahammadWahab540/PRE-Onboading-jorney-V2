@@ -21,6 +21,8 @@ export interface SalesforceOnboardingRecord {
   Stage_PRE__c?: string;
   Preferred_Languages__c?: string;
   Latest_Preferred_Language__c?: string;
+  Active__c?: boolean;
+  Current_Team_PRE__c?: 'Onboarding' | 'Retargeting' | 'Retention' | string;
 
   // Program & Pricing
   Program_PRE__c: string;

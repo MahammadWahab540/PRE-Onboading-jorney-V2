@@ -158,6 +158,7 @@ export class SalesforceRestClient {
     KYC_Submission_Status_PRE__c, KYC_Submission_Date_and_Time_PRE__c, KYC_Submitted__c,
     Onboarding_Status__c, Remarks_PRE__c, Stage_PRE__c,
     Preferred_Languages__c, Latest_Preferred_Language__c,
+    Active__c, Current_Team_PRE__c,
     CreatedDate, LastModifiedDate
   `.trim().replace(/\s+/g, ' ');
 
@@ -166,6 +167,8 @@ export class SalesforceRestClient {
     const prefLang = raw.Preferred_Languages__c || raw.Latest_Preferred_Language__c || 'English';
     return {
       ...raw,
+      Active__c: raw.Active__c !== undefined ? Boolean(raw.Active__c) : true,
+      Current_Team_PRE__c: raw.Current_Team_PRE__c || 'Onboarding',
       Student_Name__c: raw.Student_Name__c || raw.Name || 'Learner',
       Token__c: token || raw.userId__c || raw.Id,
       Stage_PRE__c: raw.Stage_PRE__c || null,
@@ -203,7 +206,7 @@ export class SalesforceRestClient {
       whereClause = `userId__c = '${sanitized}' OR Program_Registered_UID_PRE__c = '${sanitized}' OR DP_Order_ID_PRE__c = '${sanitized}'`;
     }
 
-    const soql = `SELECT ${this.ACADEMY_PRE_FIELDS} FROM Academy_Onboarding_PRE__c WHERE ${whereClause} LIMIT 1`;
+    const soql = `SELECT ${this.ACADEMY_PRE_FIELDS} FROM Academy_Onboarding_PRE__c WHERE ${whereClause} ORDER BY Active__c DESC, LastModifiedDate DESC LIMIT 1`;
     const records = await this.query(soql);
     if (!records || records.length === 0) return null;
 
@@ -238,7 +241,7 @@ export class SalesforceRestClient {
          OR Student_Number__c LIKE '%${normalized}%'
          OR Student_WhatsApp_Number__c LIKE '%${normalized}%'
          OR PHONE_NUMBER__c LIKE '%${normalized}%'
-      ORDER BY LastModifiedDate DESC, CreatedDate DESC
+      ORDER BY Active__c DESC, LastModifiedDate DESC, CreatedDate DESC
       LIMIT 20
     `.trim().replace(/\s+/g, ' ');
 

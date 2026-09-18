@@ -290,6 +290,12 @@ export function mapSalesforceToJourney(
     },
     financing,
     classAccess,
+    currentTeam: record.Current_Team_PRE__c || 'Onboarding',
+    isActiveLead: record.Active__c !== undefined ? Boolean(record.Active__c) : true,
+    lead: {
+      active: record.Active__c !== undefined ? Boolean(record.Active__c) : true,
+      currentTeam: record.Current_Team_PRE__c || 'Onboarding',
+    },
     journey: {
       currentStage: 'AUTHENTICATION',
       nextAction: 'VERIFY_MOBILE',

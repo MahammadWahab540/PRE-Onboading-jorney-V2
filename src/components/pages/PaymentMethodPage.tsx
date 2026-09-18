@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
-import { CreditCard, CalendarDays, ArrowRight, ArrowLeft, CheckCircle2, ShieldCheck } from 'lucide-react';
+import { CreditCard, CalendarDays, ArrowRight, ArrowLeft, CheckCircle2, ShieldCheck, Headphones } from 'lucide-react';
 import type { PaymentMethodType, EnrollmentState } from '../../types';
 import { getFullPaymentInfo } from '../../utils/paymentLinks';
 
@@ -23,6 +23,10 @@ export const PaymentMethodPage: React.FC<PaymentMethodPageProps> = ({
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const currentTeam = (state.currentTeam || state.canonicalJourney?.currentTeam || 'Onboarding').trim();
+  const isRetargetingOrRetention =
+    currentTeam.toLowerCase() === 'retargeting' || currentTeam.toLowerCase() === 'retention';
+
   const fullPaymentInfo = getFullPaymentInfo(state.program?.name);
 
   const methods = [
@@ -31,7 +35,7 @@ export const PaymentMethodPage: React.FC<PaymentMethodPageProps> = ({
       title: 'Full Payment',
       badge: 'Fastest Route',
       description: 'Pay the full program fee in one go via UPI, Netbanking, or Debit Card.',
-      note: `Official Registration Link: ${fullPaymentInfo.link}`,
+      note: isRetargetingOrRetention ? undefined : `Official Registration Link: ${fullPaymentInfo.link}`,
       icon: (
         <div className="w-11 h-11 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-[#0B63E5] font-black text-xl">
           ₹
@@ -99,6 +103,26 @@ export const PaymentMethodPage: React.FC<PaymentMethodPageProps> = ({
             Choose the option that works best for you and your family.
           </p>
         </div>
+
+        {/* Team-Specific Consultation Alert for Retargeting & Retention */}
+        {isRetargetingOrRetention && (
+          <div
+            role="status"
+            className="mb-6 p-4 rounded-xl bg-blue-50/90 border border-blue-200 text-blue-950 flex items-start gap-3 shadow-xs"
+          >
+            <div className="w-8 h-8 rounded-lg bg-blue-100 text-[#0B63E5] flex items-center justify-center shrink-0 mt-0.5">
+              <Headphones className="w-4 h-4" />
+            </div>
+            <div>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-blue-900">
+                Admissions Consultation ({currentTeam} Team)
+              </h4>
+              <p className="text-xs text-blue-800 mt-1 leading-relaxed">
+                Our team will consult with you to finalize your personalized program fee and guide you through payment options. Official payment links will be provided directly during consultation.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* 3 Large Selectable Cards */}
         <div className="space-y-3.5 mb-6">
@@ -190,7 +214,11 @@ export const PaymentMethodPage: React.FC<PaymentMethodPageProps> = ({
                 : 'bg-slate-300 text-slate-500 cursor-not-allowed'
             }`}
           >
-            <span>Continue</span>
+            <span>
+              {isRetargetingOrRetention && selected !== 'NO_COST_EMI'
+                ? 'Proceed for Consultation'
+                : 'Continue'}
+            </span>
             <ArrowRight className="w-4 h-4" />
           </button>
 

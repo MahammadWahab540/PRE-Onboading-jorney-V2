@@ -234,4 +234,50 @@ console.log('--- RUNNING ORCHESTRATOR & FIXTURE RESOLUTION TESTS ---');
   console.log('✓ 18. Case and whitespace variations for KYC Submitted passed');
 }
 
-console.log('ALL 18 SUITES PASSED CLEANLY! ✨');
+// 19. selectActiveRecord prioritizing Active__c = true test
+{
+  const { selectActiveRecord } = await import('../src/server/domain/activeRecordResolver');
+  const records: any[] = [
+    {
+      Id: 'rec_inactive_recent',
+      Active__c: false,
+      Current_Team_PRE__c: 'Onboarding',
+      Onboarding_Status__c: 'Yet To Contact',
+      LastModifiedDate: '2026-09-18T10:00:00.000Z',
+    },
+    {
+      Id: 'rec_active_older',
+      Active__c: true,
+      Current_Team_PRE__c: 'Retargeting',
+      Onboarding_Status__c: 'Yet To Contact',
+      LastModifiedDate: '2026-09-16T10:00:00.000Z',
+    },
+  ];
+  const resolution = selectActiveRecord(records);
+  assert.strictEqual(resolution.selected?.Id, 'rec_active_older');
+  assert.strictEqual(resolution.selected?.Active__c, true);
+  assert.strictEqual(resolution.selected?.Current_Team_PRE__c, 'Retargeting');
+  console.log('✓ 19. selectActiveRecord prioritizes Active__c = true over inactive records');
+}
+
+// 20. Team mapping & active lead journey propagation test
+{
+  const teams = ['Onboarding', 'Retargeting', 'Retention'] as const;
+  for (const team of teams) {
+    const rec = {
+      Id: `lead_${team}`,
+      Active__c: true,
+      Current_Team_PRE__c: team,
+      Authentication_Verified__c: true,
+      Onboarding_Status__c: 'Yet To Pay',
+    };
+    const journey = mapSalesforceToJourney(rec as any, `lead_${team}`);
+    assert.strictEqual(journey.currentTeam, team);
+    assert.strictEqual(journey.isActiveLead, true);
+    assert.strictEqual(journey.lead?.currentTeam, team);
+    assert.strictEqual(journey.lead?.active, true);
+  }
+  console.log('✓ 20. Team mapping and active lead flags propagate cleanly to journey');
+}
+
+console.log('ALL 20 SUITES PASSED CLEANLY! ✨');

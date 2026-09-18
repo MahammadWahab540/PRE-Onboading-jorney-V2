@@ -101,6 +101,8 @@ export interface EnrollmentState {
   financing?: any;
   isAuthenticated: boolean;
   canonicalJourney?: EnrollmentJourney;
+  currentTeam?: 'Onboarding' | 'Retargeting' | 'Retention' | string;
+  isActiveLead?: boolean;
 }
 
 // Ensure PortalRoute covers all V3 routes plus legacy routes

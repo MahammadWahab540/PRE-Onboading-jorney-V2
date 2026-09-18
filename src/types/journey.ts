@@ -214,6 +214,12 @@ export interface EnrollmentJourney {
   financing?: FinancingDetails;
   classAccess: ClassAccessDetails;
   journey: JourneyMeta;
+  currentTeam?: 'Onboarding' | 'Retargeting' | 'Retention' | string;
+  isActiveLead?: boolean;
+  lead?: {
+    active: boolean;
+    currentTeam: string;
+  };
 }
 
 export interface JourneyResolution {

@@ -66,6 +66,8 @@ const initialEnrollmentState: EnrollmentState = {
     approvedAmount: 0,
   },
   isAuthenticated: false,
+  currentTeam: 'Onboarding',
+  isActiveLead: true,
 };
 
 // Normalize recommendedRoute from backend to PortalRoute
@@ -227,6 +229,8 @@ export default function App() {
         approvedAmount: journey.financing?.approvedAmount || 0,
         rejectionReason: journey.financing?.rejectionReason,
       },
+      currentTeam: journey.currentTeam || raw.currentTeam || (journey as any).lead?.currentTeam || prev.currentTeam || 'Onboarding',
+      isActiveLead: journey.isActiveLead ?? raw.isActiveLead ?? (journey as any).lead?.active ?? prev.isActiveLead ?? true,
     }));
   }, []);
 

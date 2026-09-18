@@ -84,7 +84,7 @@ async function updateSalesforceRecord(env: Env, recordId: string, updates: Recor
   return true;
 }
 
-const ACADEMY_FIELDS = `Id, Name, PHONE_NUMBER__c, Student_Number__c, Student_WhatsApp_Number__c, Parent_Guardian_Phone_Number_PRE__c, Email_PRE__c, Date_of_Birth__c, Gender__c, Program_PRE__c, Program_Registered_UID_PRE__c, userId__c, Product_Price__c, Amount_Payable_PRE__c, Total_Amount_PRE__c, Remaining_Amount_To_Be_Paid_PRE__c, Payment_Plan_Discount__c, Amount_to_be_Receive__c, Payment_Plan_PRE__c, Current_Payment_Status__c, Down_Payment_Done_On_PRE__c, DP_Order_ID_PRE__c, Applied_Loan_Amount__c, Total_Tenure_PRE__c, Eligible_NBFCs_PRE__c, Choose_NBFC_PRE__c, Disbursed_Amount_PRE__c, Disbursed_Date_Time__c, Disbursed_NBFC_Name__c, Total_Disbursed_Loan_Amount__c, NBFC_Status__c, Status_Of_Decision_in_NBFC_PRE__c, Co_Applicant_Name__c, Co_Applicant_Phone_Number_PRE__c, Co_Applicant_Mail_ID_PRE__c, Relation_with_the_Co_Applicant__c, Co_Applicant_Age_PRE__c, Co_Applicant_Employment_Type_PRE__c, Co_applicant_Occupation_PRE__c, Co_Applicant_Monthly_Income_PRE__c, Co_Applicant_s_Monthly_Income_Range_PRE__c, CIBIL_Score_Range_PRE__c, Co_Applicant_State_PRE__c, Co_Applicant_Address_PRE__c, KYC_Submission_Status_PRE__c, KYC_Submission_Date_and_Time_PRE__c, KYC_Submitted__c, Onboarding_Status__c, Remarks_PRE__c, Stage_PRE__c, Preferred_Languages__c, Latest_Preferred_Language__c, CreatedDate, LastModifiedDate`;
+const ACADEMY_FIELDS = `Id, Name, PHONE_NUMBER__c, Student_Number__c, Student_WhatsApp_Number__c, Parent_Guardian_Phone_Number_PRE__c, Email_PRE__c, Date_of_Birth__c, Gender__c, Program_PRE__c, Program_Registered_UID_PRE__c, userId__c, Product_Price__c, Amount_Payable_PRE__c, Total_Amount_PRE__c, Remaining_Amount_To_Be_Paid_PRE__c, Payment_Plan_Discount__c, Amount_to_be_Receive__c, Payment_Plan_PRE__c, Current_Payment_Status__c, Down_Payment_Done_On_PRE__c, DP_Order_ID_PRE__c, Applied_Loan_Amount__c, Total_Tenure_PRE__c, Eligible_NBFCs_PRE__c, Choose_NBFC_PRE__c, Disbursed_Amount_PRE__c, Disbursed_Date_Time__c, Disbursed_NBFC_Name__c, Total_Disbursed_Loan_Amount__c, NBFC_Status__c, Status_Of_Decision_in_NBFC_PRE__c, Co_Applicant_Name__c, Co_Applicant_Phone_Number_PRE__c, Co_Applicant_Mail_ID_PRE__c, Relation_with_the_Co_Applicant__c, Co_Applicant_Age_PRE__c, Co_Applicant_Employment_Type_PRE__c, Co_applicant_Occupation_PRE__c, Co_Applicant_Monthly_Income_PRE__c, Co_Applicant_s_Monthly_Income_Range_PRE__c, CIBIL_Score_Range_PRE__c, Co_Applicant_State_PRE__c, Co_Applicant_Address_PRE__c, KYC_Submission_Status_PRE__c, KYC_Submission_Date_and_Time_PRE__c, KYC_Submitted__c, Onboarding_Status__c, Remarks_PRE__c, Stage_PRE__c, Preferred_Languages__c, Latest_Preferred_Language__c, Active__c, Current_Team_PRE__c, CreatedDate, LastModifiedDate`;
 
 async function getSalesforceRecordByToken(env: Env, token: string) {
   const cleanToken = token.replace(/'/g, "\\'");
@@ -92,17 +92,45 @@ async function getSalesforceRecordByToken(env: Env, token: string) {
   const whereClause = isSfId
     ? `userId__c = '${cleanToken}' OR Program_Registered_UID_PRE__c = '${cleanToken}' OR Id = '${cleanToken}'`
     : `userId__c = '${cleanToken}' OR Program_Registered_UID_PRE__c = '${cleanToken}'`;
-  const soql = `SELECT ${ACADEMY_FIELDS} FROM Academy_Onboarding_PRE__c WHERE ${whereClause} LIMIT 1`;
+  const soql = `SELECT ${ACADEMY_FIELDS} FROM Academy_Onboarding_PRE__c WHERE ${whereClause} ORDER BY Active__c DESC, LastModifiedDate DESC LIMIT 1`;
   const records = await querySalesforce(env, soql);
-  return records && records.length > 0 ? records[0] : null;
+  if (!records || records.length === 0) return null;
+
+  let rec = records[0];
+
+  // If the queried record is marked inactive (Active__c = false), resolve to the active lead for this student
+  if (rec.Active__c === false) {
+    const studentPhone = rec.PHONE_NUMBER__c || rec.Student_WhatsApp_Number__c || rec.Student_Number__c;
+    if (studentPhone) {
+      const cleanP = String(studentPhone).replace(/\D/g, '').slice(-10);
+      if (cleanP.length >= 10) {
+        const activeSoql = `SELECT ${ACADEMY_FIELDS} FROM Academy_Onboarding_PRE__c WHERE (PHONE_NUMBER__c LIKE '%${cleanP}%' OR Student_Number__c LIKE '%${cleanP}%' OR Student_WhatsApp_Number__c LIKE '%${cleanP}%') AND Active__c = true ORDER BY LastModifiedDate DESC LIMIT 1`;
+        try {
+          const activeRecords = await querySalesforce(env, activeSoql);
+          if (activeRecords && activeRecords.length > 0) {
+            console.log(`[SF Active Lead Resolver] Switched from inactive lead ${rec.Id} to active lead ${activeRecords[0].Id} (Team: ${activeRecords[0].Current_Team_PRE__c})`);
+            rec = activeRecords[0];
+          }
+        } catch (e) {
+          console.warn('Active lead lookup warning:', e);
+        }
+      }
+    }
+  }
+
+  return rec;
 }
 
 function sanitizeAndMapRecord(r: any) {
   const activeUid = r.userId__c || r.Program_Registered_UID_PRE__c || r.Id;
   const activeToken = r.Token__c || activeUid;
+  const currentTeam = r.Current_Team_PRE__c || 'Onboarding';
+  const isActiveLead = r.Active__c !== undefined ? Boolean(r.Active__c) : true;
 
   const sanitizedRec = {
     ...r,
+    Active__c: isActiveLead,
+    Current_Team_PRE__c: currentTeam,
     Student_Number__c: '••••••••••',
     Student_WhatsApp_Number__c: '••••••••••',
     PHONE_NUMBER__c: '••••••••••',
@@ -111,8 +139,19 @@ function sanitizeAndMapRecord(r: any) {
     Email_PRE__c: r.Email_PRE__c ? `${r.Email_PRE__c.slice(0, 2)}••••@${r.Email_PRE__c.split('@')[1] || 'nxtwave.in'}` : '••••@nxtwave.in',
   };
 
-  const recWithAuth = { ...r, Authentication_Verified__c: true };
+  const recWithAuth = {
+    ...r,
+    Active__c: isActiveLead,
+    Current_Team_PRE__c: currentTeam,
+    Authentication_Verified__c: true,
+  };
   const journeyObj = mapSalesforceToJourney(recWithAuth, activeToken);
+  journeyObj.currentTeam = currentTeam;
+  journeyObj.isActiveLead = isActiveLead;
+  journeyObj.lead = {
+    active: isActiveLead,
+    currentTeam,
+  };
 
   return {
     record: sanitizedRec,
@@ -238,7 +277,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   if (url.pathname === '/api/admin/recent' && request.method === 'GET') {
     try {
       const limit = parseInt(url.searchParams.get('limit') || '25', 10);
-      const soql = `SELECT ${ACADEMY_FIELDS} FROM Academy_Onboarding_PRE__c ORDER BY LastModifiedDate DESC LIMIT ${limit}`;
+      const soql = `SELECT ${ACADEMY_FIELDS} FROM Academy_Onboarding_PRE__c ORDER BY Active__c DESC, LastModifiedDate DESC LIMIT ${limit}`;
       const records = await querySalesforce(env, soql);
       const mapped = records.map(sanitizeAndMapRecord);
       return new Response(
@@ -267,6 +306,48 @@ export const onRequest: PagesFunction<Env> = async (context) => {
       }
 
       const cleanPhone = String(phone).replace(/\D/g, '').slice(-10);
+
+      // Primary: Query active lead directly from Salesforce
+      try {
+        const sfResolveSoql = `SELECT ${ACADEMY_FIELDS} FROM Academy_Onboarding_PRE__c WHERE (PHONE_NUMBER__c LIKE '%${cleanPhone}%' OR Student_Number__c LIKE '%${cleanPhone}%' OR Student_WhatsApp_Number__c LIKE '%${cleanPhone}%') ORDER BY Active__c DESC, LastModifiedDate DESC LIMIT 1`;
+        const sfRecords = await querySalesforce(env, sfResolveSoql);
+        if (sfRecords && sfRecords.length > 0) {
+          const rec = sfRecords[0];
+          const currentTeam = rec.Current_Team_PRE__c || 'Onboarding';
+          const isActive = rec.Active__c !== undefined ? Boolean(rec.Active__c) : true;
+          return new Response(
+            JSON.stringify({
+              success: true,
+              student: {
+                phone: cleanPhone,
+                name: rec.Name || 'Learner',
+                maskedPhone: `+91 ${cleanPhone.slice(0, 2)}••••${cleanPhone.slice(-4)}`,
+              },
+              salesforce: {
+                recordId: rec.Id,
+                object: 'Academy_Onboarding_PRE__c',
+                status: rec.Onboarding_Status__c || 'Yet To Contact',
+                stagePre: rec.Stage_PRE__c || 'program',
+                active: isActive,
+                currentTeam: currentTeam,
+              },
+              journey: {
+                stage: 'PROGRAM_REVIEW',
+                route: rec.Stage_PRE__c || 'program',
+                targetRoute: rec.Stage_PRE__c || 'program',
+                token: rec.Id,
+                currentTeam: currentTeam,
+                isActiveLead: isActive,
+                authRequired: false,
+              },
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } }
+          );
+        }
+      } catch (sfErr) {
+        console.warn('Salesforce direct resolve warning:', sfErr);
+      }
+
       const supabaseUrl = env.SUPABASE_URL || 'https://jqxmyxuagerayrgvxjwg.supabase.co';
       const supabaseKey = env.SUPABASE_SECRET_KEY || env.SUPABASE_SERVICE_ROLE_KEY || '';
 
@@ -297,12 +378,16 @@ export const onRequest: PagesFunction<Env> = async (context) => {
                   object: 'Academy_Onboarding_PRE__c',
                   status: row.nbfc_overall_stages || 'Yet To Contact',
                   stagePre: row.lms_access_status || 'program',
+                  active: true,
+                  currentTeam: 'Onboarding',
                 },
                 journey: {
                   stage: 'PROGRAM_REVIEW',
                   route: 'program',
                   targetRoute: 'program',
                   token: row.token || row.id,
+                  currentTeam: 'Onboarding',
+                  isActiveLead: true,
                   authRequired: false,
                 },
               }),
@@ -328,12 +413,16 @@ export const onRequest: PagesFunction<Env> = async (context) => {
             object: 'Academy_Onboarding_PRE__c',
             status: 'Yet To Contact',
             stagePre: 'program',
+            active: true,
+            currentTeam: 'Onboarding',
           },
           journey: {
             stage: 'PROGRAM_REVIEW',
             route: 'program',
             targetRoute: 'program',
             token: 'a03fv0000014m0zAAA',
+            currentTeam: 'Onboarding',
+            isActiveLead: true,
             authRequired: false,
           },
         }),
@@ -353,6 +442,22 @@ export const onRequest: PagesFunction<Env> = async (context) => {
       const body: any = await request.json();
       const mobile = body?.mobile || body?.mobileNumber || body?.phone || body?.identifier;
       const cleanPhone = String(mobile || '').replace(/\D/g, '').slice(-10) || '9100886544';
+
+      // Query active lead directly from Salesforce
+      let resolvedToken = 'a03fv0000014m0zAAA';
+      let resolvedTeam = 'Onboarding';
+      let resolvedActive = true;
+      try {
+        const sfOtpSoql = `SELECT Id, Name, Active__c, Current_Team_PRE__c FROM Academy_Onboarding_PRE__c WHERE (PHONE_NUMBER__c LIKE '%${cleanPhone}%' OR Student_Number__c LIKE '%${cleanPhone}%' OR Student_WhatsApp_Number__c LIKE '%${cleanPhone}%') ORDER BY Active__c DESC, LastModifiedDate DESC LIMIT 1`;
+        const otpRecords = await querySalesforce(env, sfOtpSoql);
+        if (otpRecords && otpRecords.length > 0) {
+          resolvedToken = otpRecords[0].Id;
+          resolvedTeam = otpRecords[0].Current_Team_PRE__c || 'Onboarding';
+          resolvedActive = otpRecords[0].Active__c !== undefined ? Boolean(otpRecords[0].Active__c) : true;
+        }
+      } catch (sfErr) {
+        console.warn('OTP active lead lookup warning:', sfErr);
+      }
 
       // Generate 6-digit OTP code
       const code = Math.floor(100000 + Math.random() * 900000).toString();
@@ -406,7 +511,9 @@ export const onRequest: PagesFunction<Env> = async (context) => {
       return new Response(
         JSON.stringify({
           success: true,
-          token: 'a03fv0000014m0zAAA',
+          token: resolvedToken,
+          currentTeam: resolvedTeam,
+          isActiveLead: resolvedActive,
           maskedMobile: `+91 ${cleanPhone.slice(0, 2)}••••${cleanPhone.slice(-4)}`,
           cooldownSeconds: 30,
           demoAllowed: true,
@@ -428,11 +535,41 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 
   // 6. Handle POST /api/auth/verify-otp
   if (url.pathname === '/api/auth/verify-otp' && request.method === 'POST') {
+    const body: any = await request.json().catch(() => ({}));
+    const mobile = body?.mobile || body?.phone;
+    let resolvedToken = body?.token || 'a03fv0000014m0zAAA';
+    let resolvedTeam = 'Onboarding';
+    let resolvedActive = true;
+
+    if (mobile) {
+      const cleanPhone = String(mobile).replace(/\D/g, '').slice(-10);
+      try {
+        const sfVerifySoql = `SELECT Id, Name, Active__c, Current_Team_PRE__c FROM Academy_Onboarding_PRE__c WHERE (PHONE_NUMBER__c LIKE '%${cleanPhone}%' OR Student_Number__c LIKE '%${cleanPhone}%' OR Student_WhatsApp_Number__c LIKE '%${cleanPhone}%') ORDER BY Active__c DESC, LastModifiedDate DESC LIMIT 1`;
+        const vRecords = await querySalesforce(env, sfVerifySoql);
+        if (vRecords && vRecords.length > 0) {
+          resolvedToken = vRecords[0].Id;
+          resolvedTeam = vRecords[0].Current_Team_PRE__c || 'Onboarding';
+          resolvedActive = vRecords[0].Active__c !== undefined ? Boolean(vRecords[0].Active__c) : true;
+        }
+      } catch (e) {}
+    } else if (resolvedToken) {
+      try {
+        const rec = await getSalesforceRecordByToken(env, resolvedToken);
+        if (rec) {
+          resolvedToken = rec.Id;
+          resolvedTeam = rec.Current_Team_PRE__c || 'Onboarding';
+          resolvedActive = rec.Active__c !== undefined ? Boolean(rec.Active__c) : true;
+        }
+      } catch (e) {}
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
         verified: true,
-        token: 'a03fv0000014m0zAAA',
+        token: resolvedToken,
+        currentTeam: resolvedTeam,
+        isActiveLead: resolvedActive,
         message: 'OTP verified successfully',
       }),
       { status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } }
@@ -863,15 +1000,8 @@ function resolveNorthernArcStage(child: any, parentRec: any) {
   if (url.pathname.includes('/nbfc-status')) {
     const token = url.pathname.split('/')[3] || 'a03fv0000014m0zAAA';
     try {
-      const cleanToken = token.replace(/'/g, "\\'");
-      const isSfId = /^[a-zA-Z0-9]{15,18}$/.test(cleanToken);
-      const whereClause = isSfId
-        ? `userId__c = '${cleanToken}' OR Program_Registered_UID_PRE__c = '${cleanToken}' OR Id = '${cleanToken}'`
-        : `userId__c = '${cleanToken}' OR Program_Registered_UID_PRE__c = '${cleanToken}'`;
-      const soql = `SELECT ${ACADEMY_FIELDS} FROM Academy_Onboarding_PRE__c WHERE ${whereClause} LIMIT 1`;
-      const records = await querySalesforce(env, soql);
-      if (records && records.length > 0) {
-        const rec = records[0];
+      const rec = await getSalesforceRecordByToken(env, token);
+      if (rec) {
         const studentPhone = rec.PHONE_NUMBER__c || rec.Student_WhatsApp_Number__c || rec.Student_Number__c;
         let childRecords: any[] = [];
         if (studentPhone) {
@@ -930,9 +1060,13 @@ function resolveNorthernArcStage(child: any, parentRec: any) {
         return new Response(
           JSON.stringify({
             success: true,
+            currentTeam: rec.Current_Team_PRE__c || 'Onboarding',
+            isActiveLead: rec.Active__c !== undefined ? Boolean(rec.Active__c) : true,
             financing: {
               applied: true,
               appliedAmount,
+              currentTeam: rec.Current_Team_PRE__c || 'Onboarding',
+              isActiveLead: rec.Active__c !== undefined ? Boolean(rec.Active__c) : true,
               nbfcName: activeLender,
               applicationId: activeChild?.Northern_Arc_App_ID_PRE__c || activeChild?.Master_App_ID__c || `NBFC-${rec.Id.slice(-6).toUpperCase()}`,
               status: resolvedStatus.statusCode,
