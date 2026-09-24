@@ -312,27 +312,6 @@ export const AuthPage: React.FC<AuthPageProps> = ({ state, token, onSuccess, onT
               <strong className="text-slate-900 font-mono font-semibold">{maskedMobile}</strong>
             </p>
 
-            {devOtp && (
-              <div className="mb-5 p-3.5 rounded-xl bg-blue-50/80 border border-blue-200/90 text-xs text-blue-950 flex items-center justify-between shadow-xs">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span>
-                    OTP Code: <strong className="font-mono text-sm tracking-widest text-blue-700">{devOtp}</strong>
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const digits = devOtp.split('');
-                    setOtp(digits);
-                    handleVerifyOtp(undefined, digits.join(''));
-                  }}
-                  className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition cursor-pointer shadow-xs"
-                >
-                  Auto-fill
-                </button>
-              </div>
-            )}
 
             <form onSubmit={handleVerifyOtp} className="space-y-6">
               {/* 6-box OTP input */}
