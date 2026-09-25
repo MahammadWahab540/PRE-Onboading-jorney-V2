@@ -275,11 +275,7 @@ export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
     {
       q: 'What is an e-NACH Auto-Debit Mandate?',
       a: 'e-NACH is a secure, RBI-mandated digital banking authorization that allows your monthly EMI to be automatically debited from your co-applicant’s bank account on a fixed date each month.',
-    },
-    ...(isRetargetingOrRetention ? [] : [{
-      q: 'When will my program classes unlock?',
-      a: 'Your learning portal and curriculum classes unlock automatically as soon as your auto-debit mandate is confirmed and the partner lender issues the sanction.',
-    }]),
+    }
   ];
 
   return (
