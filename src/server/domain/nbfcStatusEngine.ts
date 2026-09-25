@@ -29,7 +29,7 @@ export interface NormalizedNbfcStatusResponse {
 
 export const FALLBACK_LENDER_NAME = 'Finance partner is being assigned';
 
-export function getCadenceStages(activeStep: number, isRejected = false): CadenceStageInfo[] {
+export function getCadenceStages(activeStep: number, isRejected = false, isRetargetingOrRetention = false): CadenceStageInfo[] {
   return [
     {
       step: 1,
@@ -61,8 +61,10 @@ export function getCadenceStages(activeStep: number, isRejected = false): Cadenc
     },
     {
       step: 5,
-      name: 'Disbursement & Class Access',
-      description: 'Facility disbursed directly to NxtWave and Genius LMS portal unlocked',
+      name: isRetargetingOrRetention ? 'Disbursement' : 'Disbursement & Class Access',
+      description: isRetargetingOrRetention 
+        ? 'Facility disbursed directly to NxtWave'
+        : 'Facility disbursed directly to NxtWave and Genius LMS portal unlocked',
       isCompleted: activeStep === 5,
       isCurrent: activeStep === 5,
     },
@@ -111,6 +113,7 @@ export function normalizeNbfcStatus(
   record?: Partial<SalesforceOnboardingRecord> | null,
   childRecord?: any | null
 ): NormalizedNbfcStatusResponse {
+  const isRetargetingOrRetention = (record?.Current_Team_PRE__c?.toLowerCase() === 'retargeting' || record?.Current_Team_PRE__c?.toLowerCase() === 'retention');
   const activeLender = resolveActiveLenderName(record, childRecord);
   const lastUpdated = (record as any)?.LastModifiedDate || childRecord?.LastModifiedDate || new Date().toISOString();
 
@@ -160,18 +163,22 @@ export function normalizeNbfcStatus(
   ) {
     return {
       statusCode: 'DISBURSED',
-      statusLabel: 'Loan Disbursed & Classes Unlocked',
+      statusLabel: isRetargetingOrRetention ? 'Loan Disbursed' : 'Loan Disbursed & Classes Unlocked',
       activeLender,
-      userMessage: `Your education financing has been fully disbursed by ${activeLender}. Your program curriculum and learner portal are now unlocked!`,
-      guidanceMessage: 'You now have full access to your cohort, live classes, and curriculum modules. Welcome to NxtWave!',
+      userMessage: isRetargetingOrRetention
+        ? `Your education financing has been fully disbursed by ${activeLender}.`
+        : `Your education financing has been fully disbursed by ${activeLender}. Your program curriculum and learner portal are now unlocked!`,
+      guidanceMessage: isRetargetingOrRetention
+        ? 'Your loan facility has been fully processed.'
+        : 'You now have full access to your cohort, live classes, and curriculum modules. Welcome to NxtWave!',
       cadenceStep: 5,
-      cadenceStages: getCadenceStages(5),
-      callToAction: {
+      cadenceStages: getCadenceStages(5, false, isRetargetingOrRetention),
+      callToAction: isRetargetingOrRetention ? null : {
         label: 'Go to Class Access 🎉',
         action: 'GO_TO_CLASS_ACCESS',
         primary: true,
       },
-      classAccessEta: 'Immediate (Active)',
+      classAccessEta: isRetargetingOrRetention ? null : 'Immediate (Active)',
       lastUpdated,
       rawStatus: rawStatus || 'Disbursed',
     };
@@ -189,14 +196,18 @@ export function normalizeNbfcStatus(
   ) {
     return {
       statusCode: 'EMI_SETUP_COMPLETED',
-      statusLabel: 'Auto-Debit Configured (Finalizing Access)',
+      statusLabel: isRetargetingOrRetention ? 'Auto-Debit Configured' : 'Auto-Debit Configured (Finalizing Access)',
       activeLender,
-      userMessage: `Congratulations! Your monthly auto-debit setup with ${activeLender} is confirmed. In 2-3 days we will complete the class access.`,
-      guidanceMessage: 'In 2-3 days we will complete the class access and unlock your Genius LMS portal.',
+      userMessage: isRetargetingOrRetention 
+        ? `Congratulations! Your monthly auto-debit setup with ${activeLender} is confirmed.` 
+        : `Congratulations! Your monthly auto-debit setup with ${activeLender} is confirmed. In 2-3 days we will complete the class access.`,
+      guidanceMessage: isRetargetingOrRetention 
+        ? 'Your mandate is active. Disbursement will follow shortly.' 
+        : 'In 2-3 days we will complete the class access and unlock your Genius LMS portal.',
       cadenceStep: 4,
-      cadenceStages: getCadenceStages(4),
+      cadenceStages: getCadenceStages(4, false, isRetargetingOrRetention),
       callToAction: null,
-      classAccessEta: 'In 2-3 days we will complete the class access',
+      classAccessEta: isRetargetingOrRetention ? null : 'In 2-3 days we will complete the class access',
       lastUpdated,
       rawStatus,
     };
@@ -219,7 +230,7 @@ export function normalizeNbfcStatus(
       userMessage: `Your auto-debit authorization is currently being validated with your bank and ${activeLender}.`,
       guidanceMessage: 'Once your bank validates the mandate, your loan is sanctioned and your learning portal will unlock.',
       cadenceStep: 4,
-      cadenceStages: getCadenceStages(4),
+      cadenceStages: getCadenceStages(4, false, isRetargetingOrRetention),
       callToAction: null,
       classAccessEta: 'Within 24 hours',
       lastUpdated,
@@ -242,7 +253,7 @@ export function normalizeNbfcStatus(
       userMessage: `Great news! Your 0% No-Cost EMI has been approved by ${activeLender}. Our NBFC partner will connect with you to set up your auto-debit (e-NACH).`,
       guidanceMessage: `Our NBFC partner ${activeLender} will connect with you to guide you through the auto-debit registration. No upfront charges or interest will be billed.`,
       cadenceStep: 4,
-      cadenceStages: getCadenceStages(4),
+      cadenceStages: getCadenceStages(4, false, isRetargetingOrRetention),
       callToAction: null,
       classAccessEta: 'Within 24 hours after mandate setup',
       lastUpdated,
@@ -273,7 +284,7 @@ export function normalizeNbfcStatus(
       userMessage: `Your financing application has been sanctioned by ${activeLender}. Our NBFC partner will connect with you for digital agreement signing and auto-debit setup.`,
       guidanceMessage: 'Keep your PAN card and Aadhaar-registered mobile handy for quick digital signing.',
       cadenceStep: 3,
-      cadenceStages: getCadenceStages(3),
+      cadenceStages: getCadenceStages(3, false, isRetargetingOrRetention),
       callToAction: null,
       classAccessEta: 'Within 1–2 business days',
       lastUpdated,
@@ -298,7 +309,7 @@ export function normalizeNbfcStatus(
       userMessage: `Our initial lending partner was unable to approve this application under their criteria. Our dedicated admissions team is currently routing your file to an alternate partner.`,
       guidanceMessage: 'You can also nominate an alternate co-applicant with an active salary account or switch to direct fee payment anytime.',
       cadenceStep: 2,
-      cadenceStages: getCadenceStages(2, true),
+      cadenceStages: getCadenceStages(2, true, isRetargetingOrRetention),
       callToAction: {
         label: 'Nominate Alternate Co-Applicant',
         action: 'CHANGE_CO_APPLICANT',
@@ -329,7 +340,7 @@ export function normalizeNbfcStatus(
       userMessage: `Our Team will connect with you for additional documents required by ${activeLender}.`,
       guidanceMessage: 'Our admissions desk will reach out via call or WhatsApp. Please keep your updated bank statement or ID proofs handy.',
       cadenceStep: 2,
-      cadenceStages: getCadenceStages(2),
+      cadenceStages: getCadenceStages(2, false, isRetargetingOrRetention),
       callToAction: null,
       classAccessEta: 'Pending document verification',
       lastUpdated,
@@ -359,7 +370,7 @@ export function normalizeNbfcStatus(
       userMessage: `The credit verification desk at ${activeLender} is evaluating your co-applicant documentation and profile.`,
       guidanceMessage: 'Underwriting assessments are automated and usually completed within 24–48 hours. No action is required from your side.',
       cadenceStep: 2,
-      cadenceStages: getCadenceStages(2),
+      cadenceStages: getCadenceStages(2, false, isRetargetingOrRetention),
       callToAction: {
         label: 'Refresh Status',
         action: 'REFRESH',
@@ -383,7 +394,7 @@ export function normalizeNbfcStatus(
     userMessage: `Your No-Cost EMI educational application has been created and initiated with ${activeLender}. Our admissions desk is coordinating the initial verification.`,
     guidanceMessage: `Your co-applicant may receive an SMS or WhatsApp link from ${activeLender} to confirm consent via OTP. Please ensure their phone is reachable.`,
     cadenceStep: 1,
-    cadenceStages: getCadenceStages(1),
+    cadenceStages: getCadenceStages(1, false, isRetargetingOrRetention),
     callToAction: {
       label: 'Refresh Status',
       action: 'REFRESH',

@@ -737,7 +737,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     }
   }
 
-function buildCadenceStages(currentStep: number, isEmiDone: boolean, isDisbursed: boolean) {
+function buildCadenceStages(currentStep: number, isEmiDone: boolean, isDisbursed: boolean, isRetargetingOrRetention: boolean = false) {
   return [
     {
       step: 1,
@@ -769,15 +769,17 @@ function buildCadenceStages(currentStep: number, isEmiDone: boolean, isDisbursed
     },
     {
       step: 5,
-      name: 'Disbursement & Class Access',
-      description: 'Facility disbursed directly to NxtWave and Genius LMS portal unlocked',
+      name: isRetargetingOrRetention ? 'Disbursement' : 'Disbursement & Class Access',
+      description: isRetargetingOrRetention
+        ? 'Facility disbursed directly to NxtWave'
+        : 'Facility disbursed directly to NxtWave and Genius LMS portal unlocked',
       isCompleted: isDisbursed,
       isCurrent: currentStep === 5 && !isDisbursed,
     },
   ];
 }
 
-function resolveNorthernArcStage(child: any, parentRec: any) {
+function resolveNorthernArcStage(child: any, parentRec: any, isRetargetingOrRetention: boolean = false) {
   const northernStage = (child?.Northern_Arc_Overall_Stages__c || '').trim();
   const otherStage = (child?.other_NBFC_PRE__c || '').trim();
   const parentStatus = (parentRec?.Onboarding_Status__c || '').trim();
@@ -790,11 +792,15 @@ function resolveNorthernArcStage(child: any, parentRec: any) {
   if (lower.includes('disbursed')) {
     return {
       statusCode: 'DISBURSED',
-      statusLabel: 'Loan Disbursed - Class Access Unlocked',
-      userMessage: 'Congratulations! Your loan with NORTHERN ARC has been disbursed and class access is unlocked.',
-      guidanceMessage: 'Your Genius LMS portal is active. You can start learning right away!',
+      statusLabel: isRetargetingOrRetention ? 'Loan Disbursed' : 'Loan Disbursed - Class Access Unlocked',
+      userMessage: isRetargetingOrRetention 
+        ? 'Congratulations! Your loan with NORTHERN ARC has been disbursed.' 
+        : 'Congratulations! Your loan with NORTHERN ARC has been disbursed and class access is unlocked.',
+      guidanceMessage: isRetargetingOrRetention
+        ? 'Your loan facility has been fully processed.'
+        : 'Your Genius LMS portal is active. You can start learning right away!',
       cadenceStep: 5,
-      classAccessEta: 'Immediate (Active)',
+      classAccessEta: isRetargetingOrRetention ? null : 'Immediate (Active)',
       isDisbursed: true,
       isEmiDone: true,
     };
@@ -804,11 +810,15 @@ function resolveNorthernArcStage(child: any, parentRec: any) {
   if (lower.includes('emi setup done') || lower.includes('mandate success')) {
     return {
       statusCode: 'EMI_SETUP_COMPLETED',
-      statusLabel: 'Auto-Debit Configured (Finalizing Access)',
-      userMessage: 'Congratulations! Your monthly auto-debit setup with NORTHERN ARC is confirmed. In 2-3 days we will complete the class access.',
-      guidanceMessage: 'In 2-3 days we will complete the class access and unlock your Genius LMS portal.',
+      statusLabel: isRetargetingOrRetention ? 'Auto-Debit Configured' : 'Auto-Debit Configured (Finalizing Access)',
+      userMessage: isRetargetingOrRetention
+        ? 'Congratulations! Your monthly auto-debit setup with NORTHERN ARC is confirmed.'
+        : 'Congratulations! Your monthly auto-debit setup with NORTHERN ARC is confirmed. In 2-3 days we will complete the class access.',
+      guidanceMessage: isRetargetingOrRetention
+        ? 'Your mandate is active. Disbursement will follow shortly.'
+        : 'In 2-3 days we will complete the class access and unlock your Genius LMS portal.',
       cadenceStep: 4,
-      classAccessEta: 'In 2-3 days we will complete the class access',
+      classAccessEta: isRetargetingOrRetention ? null : 'In 2-3 days we will complete the class access',
       isDisbursed: false,
       isEmiDone: true,
     };
@@ -1024,29 +1034,37 @@ function resolveNorthernArcStage(child: any, parentRec: any) {
         const approvedAmount = Number(activeChild?.Northern_Arc_Approved_Amount__c || activeChild?.Master_Approved_Loan_Amount__c || appliedAmount);
         const approvedTenure = activeChild?.Northern_Arc_Approved_Tenure__c || '6 Months';
 
+        const isRetargetingOrRetention = (rec.Current_Team_PRE__c?.toLowerCase() === 'retargeting' || rec.Current_Team_PRE__c?.toLowerCase() === 'retention');
+
         let resolvedStatus: ReturnType<typeof resolveNorthernArcStage>;
         if (isNorthern) {
-          resolvedStatus = resolveNorthernArcStage(activeChild, rec);
+          resolvedStatus = resolveNorthernArcStage(activeChild, rec, isRetargetingOrRetention);
         } else {
           const rawChildStage = activeChild?.Northern_Arc_Overall_Stages__c || activeChild?.other_NBFC_PRE__c || activeChild?.Gyandhan_Overall_Stages__c || activeChild?.Fibe_Overall_Stages__c || rec.Onboarding_Status__c;
           const isEmiDone = rawChildStage ? (rawChildStage.toLowerCase().includes('emi setup done') || rawChildStage.toLowerCase().includes('disbursed')) : false;
           resolvedStatus = {
             statusCode: isEmiDone ? 'EMI_SETUP_COMPLETED' : 'UNDER_REVIEW',
-            statusLabel: isEmiDone ? 'Auto-Debit Configured (Finalizing Access)' : 'Under Review',
+            statusLabel: isEmiDone 
+              ? (isRetargetingOrRetention ? 'Auto-Debit Configured' : 'Auto-Debit Configured (Finalizing Access)') 
+              : 'Under Review',
             userMessage: isEmiDone
-              ? `Congratulations! Your monthly auto-debit setup with ${activeLender} is confirmed. In 2-3 days we will complete the class access.`
+              ? (isRetargetingOrRetention
+                  ? `Congratulations! Your monthly auto-debit setup with ${activeLender} is confirmed.`
+                  : `Congratulations! Your monthly auto-debit setup with ${activeLender} is confirmed. In 2-3 days we will complete the class access.`)
               : `Your No-Cost EMI educational application has been created with ${activeLender}.`,
             guidanceMessage: isEmiDone
-              ? 'In 2-3 days we will complete the class access and unlock your Genius LMS portal.'
+              ? (isRetargetingOrRetention
+                  ? 'Your mandate is active. Disbursement will follow shortly.'
+                  : 'In 2-3 days we will complete the class access and unlock your Genius LMS portal.')
               : 'Our admissions desk is coordinating the initial verification.',
             cadenceStep: isEmiDone ? 4 : 2,
-            classAccessEta: 'In 2-3 days we will complete the class access',
+            classAccessEta: isRetargetingOrRetention ? null : 'In 2-3 days we will complete the class access',
             isDisbursed: false,
             isEmiDone,
           };
         }
 
-        const cadenceStages = buildCadenceStages(resolvedStatus.cadenceStep, resolvedStatus.isEmiDone, resolvedStatus.isDisbursed);
+        const cadenceStages = buildCadenceStages(resolvedStatus.cadenceStep, resolvedStatus.isEmiDone, resolvedStatus.isDisbursed, isRetargetingOrRetention);
 
         // Update rec with resolved lender and loan amount before mapping canonical journey
         if (isNorthern) {
