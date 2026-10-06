@@ -272,7 +272,7 @@ export const WhyNoCostEmiPage: React.FC<WhyNoCostEmiPageProps> = ({
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
-              à°¤à±†à°²à±à°—à± (Telugu)
+              Telugu
             </button>
           </div>
         </div>
@@ -517,5 +517,6 @@ export const WhyNoCostEmiPage: React.FC<WhyNoCostEmiPageProps> = ({
     </div>
   );
 };
+
 
 
