@@ -28,7 +28,7 @@ class MockPaymentProvider implements PaymentProviderInterface {
     learnerName: string
   ): Promise<PaymentOrder> {
     const orderId = `order_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`;
-    const upiLink = `upi://pay?pa=nxtwave.edutech@icici&pn=NxtWave%20Disruptive%20Technologies&am=${amount}&tr=${orderId}&cu=INR&tn=PRE%20Genius%20Enrollment`;
+    const upiLink = `upi://pay?pa=nxtwave.edutech@icici&pn=NxtWave%20Disruptive%20Technologies&am=${amount}&tr=${orderId}&cu=INR&tn=PRE%20Program%20Enrollment`;
     const upiQrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(
       upiLink
     )}`;

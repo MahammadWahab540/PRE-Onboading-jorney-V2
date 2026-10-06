@@ -254,7 +254,7 @@ export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
     {
       step: 5,
       name: 'Disbursement & Class Access',
-      description: 'Facility disbursed directly to NxtWave and Genius LMS portal unlocked',
+      description: 'Facility disbursed directly to NxtWave and learning portal unlocked',
       isCompleted: currentCadenceStep === 5,
       isCurrent: currentCadenceStep === 5,
     },

@@ -5,11 +5,19 @@
 export interface FullPaymentLinkInfo {
   link: string;
   label: string;
-  programKey: 'genius' | 'smart' | 'edge';
+  programKey: 'genius' | 'smart' | 'edge' | 'iit';
 }
 
 export function getFullPaymentInfo(programName?: string): FullPaymentLinkInfo {
   const norm = (programName || '').trim().toLowerCase();
+
+  if (norm.includes('iit') || norm.includes('ocn')) {
+    return {
+      link: 'https://accounts.ccbp.in/register/generative-agentic-ai-full-payment',
+      label: 'IIT OCN Full Payment Link',
+      programKey: 'iit',
+    };
+  }
 
   if (norm.includes('edge')) {
     return {

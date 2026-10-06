@@ -772,7 +772,7 @@ function buildCadenceStages(currentStep: number, isEmiDone: boolean, isDisbursed
       name: isRetargetingOrRetention ? 'Disbursement' : 'Disbursement & Class Access',
       description: isRetargetingOrRetention
         ? 'Facility disbursed directly to NxtWave'
-        : 'Facility disbursed directly to NxtWave and Genius LMS portal unlocked',
+        : 'Facility disbursed directly to NxtWave and learning portal unlocked',
       isCompleted: isDisbursed,
       isCurrent: currentStep === 5 && !isDisbursed,
     },
@@ -798,7 +798,7 @@ function resolveNorthernArcStage(child: any, parentRec: any, isRetargetingOrRete
         : 'Congratulations! Your loan with NORTHERN ARC has been disbursed and class access is unlocked.',
       guidanceMessage: isRetargetingOrRetention
         ? 'Your loan facility has been fully processed.'
-        : 'Your Genius LMS portal is active. You can start learning right away!',
+        : 'Your learning portal is active. You can start learning right away!',
       cadenceStep: 5,
       classAccessEta: isRetargetingOrRetention ? null : 'Immediate (Active)',
       isDisbursed: true,
@@ -816,7 +816,7 @@ function resolveNorthernArcStage(child: any, parentRec: any, isRetargetingOrRete
         : 'Congratulations! Your monthly auto-debit setup with NORTHERN ARC is confirmed. In 2-3 days we will complete the class access.',
       guidanceMessage: isRetargetingOrRetention
         ? 'Your mandate is active. Disbursement will follow shortly.'
-        : 'In 2-3 days we will complete the class access and unlock your Genius LMS portal.',
+        : 'In 2-3 days we will complete the class access and unlock your learning portal.',
       cadenceStep: 4,
       classAccessEta: isRetargetingOrRetention ? null : 'In 2-3 days we will complete the class access',
       isDisbursed: false,
@@ -1055,7 +1055,7 @@ function resolveNorthernArcStage(child: any, parentRec: any, isRetargetingOrRete
             guidanceMessage: isEmiDone
               ? (isRetargetingOrRetention
                   ? 'Your mandate is active. Disbursement will follow shortly.'
-                  : 'In 2-3 days we will complete the class access and unlock your Genius LMS portal.')
+                  : 'In 2-3 days we will complete the class access and unlock your learning portal.')
               : 'Our admissions desk is coordinating the initial verification.',
             cadenceStep: isEmiDone ? 4 : 2,
             classAccessEta: isRetargetingOrRetention ? null : 'In 2-3 days we will complete the class access',

@@ -233,7 +233,7 @@ export function mapSalesforceToJourney(
   const classAccess = {
     status: (isClassUnlocked ? 'ACTIVE' : 'LOCKED') as 'ACTIVE' | 'LOCKED',
     lmsUrl: process.env.LMS_ACCESS_URL || record.LMS_Access_URL__c || 'https://learning.nxtwave.in',
-    programTitle: record.Program_PRE__c || 'NxtWave Genius',
+    programTitle: record.Program_PRE__c || 'NxtWave Program',
     batchStartDate: record.Batch_Start_Date__c || '15 September 2026',
     unlockedAt: isClassUnlocked ? new Date().toISOString() : undefined,
     supportUrl: process.env.SUPPORT_PORTAL_URL || 'https://help.nxtwave.in',
@@ -260,8 +260,8 @@ export function mapSalesforceToJourney(
         .trim(),
     },
     program: {
-      name: record.Program_PRE__c || 'Genius',
-      code: 'GENIUS_PRE_2026',
+      name: record.Program_PRE__c || 'NxtWave Program',
+      code: 'NXTWAVE_PRE_2026',
       baseFee,
       scholarshipAmount,
       scholarshipType: 'Merit Scholarship',

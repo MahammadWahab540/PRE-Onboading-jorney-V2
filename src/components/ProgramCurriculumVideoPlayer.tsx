@@ -437,7 +437,7 @@ export const ProgramCurriculumVideoPlayer: React.FC<ProgramCurriculumVideoPlayer
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
           <span className="text-xs font-bold tracking-tight text-white/90">
-            NxtWave Genius Explainer
+            Program Explainer
           </span>
           <span className="text-[10px] font-semibold bg-[#0B63E5]/80 text-white px-2 py-0.5 rounded-full border border-blue-400/30">
             Why It Beats College

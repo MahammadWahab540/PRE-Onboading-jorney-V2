@@ -64,7 +64,7 @@ export function getCadenceStages(activeStep: number, isRejected = false, isRetar
       name: isRetargetingOrRetention ? 'Disbursement' : 'Disbursement & Class Access',
       description: isRetargetingOrRetention 
         ? 'Facility disbursed directly to NxtWave'
-        : 'Facility disbursed directly to NxtWave and Genius LMS portal unlocked',
+        : 'Facility disbursed directly to NxtWave and learning portal unlocked',
       isCompleted: activeStep === 5,
       isCurrent: activeStep === 5,
     },
@@ -203,7 +203,7 @@ export function normalizeNbfcStatus(
         : `Congratulations! Your monthly auto-debit setup with ${activeLender} is confirmed. In 2-3 days we will complete the class access.`,
       guidanceMessage: isRetargetingOrRetention 
         ? 'Your mandate is active. Disbursement will follow shortly.' 
-        : 'In 2-3 days we will complete the class access and unlock your Genius LMS portal.',
+        : 'In 2-3 days we will complete the class access and unlock your learning portal.',
       cadenceStep: 4,
       cadenceStages: getCadenceStages(4, false, isRetargetingOrRetention),
       callToAction: null,

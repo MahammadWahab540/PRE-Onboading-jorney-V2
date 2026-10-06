@@ -40,21 +40,21 @@ export const LOCALIZED_STEP_SCRIPTS: Record<string, Record<string, StepGuidanceS
     },
     congratulations: {
       title: 'Welcome & Next Steps',
-      speech: 'Congratulations on taking this exciting step towards your tech career! Your NxtWave Genius enrollment journey is ready. Let us review your program details.',
+      speech: 'Congratulations on taking this exciting step towards your tech career! Your NxtWave enrollment journey is ready. Let us review your program details.',
       keyPoints: [
         'Your admission seat is reserved',
         'Review your program highlights and fee breakdown',
         'No immediate payment required on this screen',
       ],
       faqSuggestions: [
-        'What is included in the Genius program?',
+        'What is included in the program?',
         'When does the upcoming cohort start?',
         'Can I talk to my counselor first?',
       ],
     },
     program: {
       title: 'Program Fee & Scholarship Breakdown',
-      speech: 'Here is your transparent fee breakdown for NxtWave Genius. Review your merit scholarship, deduction of your seat reservation fee, and net amount payable.',
+      speech: 'Here is your transparent fee breakdown. Review your merit scholarship, deduction of your seat reservation fee, and net amount payable.',
       keyPoints: [
         'Total Program Price: ₹1,60,000',
         'Merit Scholarship: -₹30,000',
