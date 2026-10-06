@@ -203,7 +203,7 @@ export const ProgramSummaryPage: React.FC<ProgramSummaryPageProps> = ({
                   <div className="flex flex-col">
                     <span className="font-medium">Discount Applied</span>
                   </div>
-                  <span className="font-mono font-medium">âˆ’ {formatINR(discount)}</span>
+                  <span className="font-mono font-medium">{"\u2212"} {formatINR(discount)}</span>
                 </div>
               )}
 
@@ -220,7 +220,7 @@ export const ProgramSummaryPage: React.FC<ProgramSummaryPageProps> = ({
                     <span className="font-medium">Amount Already Paid</span>
                   </div>
                   <span className="font-mono font-medium">
-                    {userPaid > 0 ? `âˆ’ ${formatINR(userPaid)}` : formatINR(0)}
+                    {userPaid > 0 ? `\u2212 ${formatINR(userPaid)}` : formatINR(0)}
                   </span>
                 </div>
               )}
