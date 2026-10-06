@@ -139,12 +139,12 @@ export function mapSalesforceToJourney(
       ? learnerName.split(' ')[0] || 'Learner'
       : 'Learner';
 
-  const baseFee = record.Product_Price__c || 180000;
+  const baseFee = record.Product_Price__c || 0;
   const scholarshipAmount = record.Payment_Plan_Discount__c ?? record.Scholarship_Amount__c ?? record.Merit_Scholarship_Amount_PRE__c ?? 0;
   const seatReservationPaid = record.Total_Amount_PRE__c ?? record.Seat_Reservation_Amount_Paid__c ?? 0;
   const amountToBeReceived = record.Amount_to_be_Receive__c ?? record.Amount_Payable_PRE__c ?? Math.max(0, baseFee - scholarshipAmount);
   const amountPayable = amountToBeReceived;
-  const remainingAmountPayable = record.Remaining_Amount_To_Be_Paid_PRE__c ?? 32000;
+  const remainingAmountPayable = record.Remaining_Amount_To_Be_Paid_PRE__c ?? 0;
 
   const paymentMethod = mapPaymentMethod(record.Payment_Plan_PRE__c);
   const paymentStatus = mapPaymentStatus(

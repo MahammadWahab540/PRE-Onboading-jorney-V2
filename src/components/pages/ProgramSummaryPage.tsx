@@ -40,14 +40,14 @@ export const ProgramSummaryPage: React.FC<ProgramSummaryPageProps> = ({
   const baseFee =
     state?.program?.baseFee ||
     state?.canonicalJourney?.program?.baseFee ||
-    180000;
+    0;
 
   const amountToBeReceived =
     state?.program?.amountToBeReceived ||
     state?.program?.amountPayable ||
     state?.canonicalJourney?.program?.amountToBeReceived ||
     state?.canonicalJourney?.program?.amountPayable ||
-    250000;
+    0;
 
   const scholarshipAmount =
     state?.program?.scholarshipAmount && state.program.scholarshipAmount > 0
@@ -56,7 +56,7 @@ export const ProgramSummaryPage: React.FC<ProgramSummaryPageProps> = ({
       ? state.canonicalJourney.program.scholarshipAmount
       : baseFee > amountToBeReceived
       ? baseFee - amountToBeReceived
-      : 50000;
+      : 0;
 
   const seatReservationPaid =
     state?.program?.seatReservationPaid ??
@@ -66,7 +66,7 @@ export const ProgramSummaryPage: React.FC<ProgramSummaryPageProps> = ({
   const netRemainingPayable =
     state?.program?.remainingAmountPayable ??
     state?.canonicalJourney?.program?.remainingAmountPayable ??
-    32000;
+    0;
 
   const programTitle = state?.program?.name || 'NxtWave Smart Program';
 

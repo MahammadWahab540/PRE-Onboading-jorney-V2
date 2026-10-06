@@ -144,11 +144,11 @@ export function buildEnrollmentState(rec: SalesforceRecord, journeyData?: any): 
   const activeUid = rec.userId__c || rec.Program_Registered_UID_PRE__c || rec.Id;
   const activeToken = rec.Token__c || activeUid;
 
-  const sfBaseFee = rec.Product_Price__c || canonical.program?.baseFee || 180000;
+  const sfBaseFee = rec.Product_Price__c || canonical.program?.baseFee || 0;
   const sfScholarship = rec.Payment_Plan_Discount__c ?? canonical.program?.scholarshipAmount ?? 0;
   const sfSeatPaid = rec.Total_Amount_PRE__c ?? canonical.program?.seatReservationPaid ?? 0;
   const sfAmountToBeReceived = rec.Amount_to_be_Receive__c ?? canonical.program?.amountToBeReceived ?? canonical.program?.amountPayable ?? rec.Amount_Payable_PRE__c ?? Math.max(0, sfBaseFee - sfScholarship);
-  const sfRemainingAmount = rec.Remaining_Amount_To_Be_Paid_PRE__c ?? canonical.program?.remainingAmountPayable ?? 32000;
+  const sfRemainingAmount = rec.Remaining_Amount_To_Be_Paid_PRE__c ?? canonical.program?.remainingAmountPayable ?? 0;
 
   return {
     journeyId: canonical.journeyId || activeUid,
