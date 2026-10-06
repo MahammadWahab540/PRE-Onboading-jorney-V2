@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import {
   Award,
@@ -29,14 +29,15 @@ export const ProgramSummaryPage: React.FC<ProgramSummaryPageProps> = ({
   onBack,
 }) => {
   const prefersReducedMotion = useReducedMotion();
+  const isIitOcn = state.program?.name?.toLowerCase().includes('iit') || state.program?.name?.toLowerCase().includes('ocn');
   const [showCurriculumVideo, setShowCurriculumVideo] = useState(false);
 
   // Commercial Pricing Data mapped directly to Salesforce fields:
-  // 1. Product_Price__c -> baseFee (full amount: ₹3,00,000)
-  // 2. Payment_Plan_Discount__c -> scholarshipAmount (discount: ₹50,000)
-  // 3. Amount_to_be_Receive__c -> amountToBeReceived (total to be paid by user: ₹2,50,000)
-  // 4. Total_Amount_PRE__c -> seatReservationPaid (seat reservation paid till now: ₹18,000)
-  // 5. Remaining_Amount_To_Be_Paid_PRE__c -> netRemainingPayable (remaining balance: ₹2,32,000)
+  // 1. Product_Price__c -> baseFee (full amount: â‚¹3,00,000)
+  // 2. Payment_Plan_Discount__c -> scholarshipAmount (discount: â‚¹50,000)
+  // 3. Amount_to_be_Receive__c -> amountToBeReceived (total to be paid by user: â‚¹2,50,000)
+  // 4. Total_Amount_PRE__c -> seatReservationPaid (seat reservation paid till now: â‚¹18,000)
+  // 5. Remaining_Amount_To_Be_Paid_PRE__c -> netRemainingPayable (remaining balance: â‚¹2,32,000)
   const baseFee =
     state?.program?.baseFee ||
     state?.canonicalJourney?.program?.baseFee ||
@@ -115,7 +116,7 @@ export const ProgramSummaryPage: React.FC<ProgramSummaryPageProps> = ({
                 <span>Program Fee (Full Cost)</span>
               </span>
               <span className="font-mono font-semibold text-slate-900">
-                ₹{baseFee.toLocaleString('en-IN')}
+                â‚¹{baseFee.toLocaleString('en-IN')}
               </span>
             </div>
 
@@ -126,7 +127,7 @@ export const ProgramSummaryPage: React.FC<ProgramSummaryPageProps> = ({
                 <span>Merit Scholarship Applied</span>
               </span>
               <span className="font-mono font-semibold">
-                -₹{scholarshipAmount.toLocaleString('en-IN')}
+                -â‚¹{scholarshipAmount.toLocaleString('en-IN')}
               </span>
             </div>
 
@@ -134,7 +135,7 @@ export const ProgramSummaryPage: React.FC<ProgramSummaryPageProps> = ({
             <div className="flex items-center justify-between py-2 px-3 bg-[#0B63E5]/5 rounded-xl border border-blue-200/80 text-blue-900 font-semibold text-xs">
               <span>Total Program Fee (After Scholarship)</span>
               <span className="font-mono font-bold text-sm text-[#0B63E5]">
-                ₹{amountToBeReceived.toLocaleString('en-IN')}
+                â‚¹{amountToBeReceived.toLocaleString('en-IN')}
               </span>
             </div>
 
@@ -146,7 +147,7 @@ export const ProgramSummaryPage: React.FC<ProgramSummaryPageProps> = ({
                   <span>Seat Reservation Fee (Paid Till Now)</span>
                 </span>
                 <span className="font-mono font-semibold">
-                  -₹{seatReservationPaid.toLocaleString('en-IN')}
+                  -â‚¹{seatReservationPaid.toLocaleString('en-IN')}
                 </span>
               </div>
             )}
@@ -158,12 +159,14 @@ export const ProgramSummaryPage: React.FC<ProgramSummaryPageProps> = ({
             <div className="flex items-center justify-between pt-1 text-base sm:text-lg">
               <div>
                 <span className="font-bold text-[#0A192F] block">Net Remaining Amount Payable</span>
-                <span className="text-xs text-slate-500 font-normal">
-                  All inclusive • zero hidden charges
+                <span className="text-xs text-slate-500 font-normal mt-0.5 block">
+                  {isIitOcn 
+                    ? "Varies based on tenure selected; includes applicable interest charges."
+                    : "All inclusive • zero hidden charges"}
                 </span>
               </div>
               <span className="font-mono font-bold text-2xl text-[#0B63E5]">
-                ₹{netRemainingPayable.toLocaleString('en-IN')}
+                â‚¹{netRemainingPayable.toLocaleString('en-IN')}
               </span>
             </div>
           </div>
@@ -251,3 +254,4 @@ export const ProgramSummaryPage: React.FC<ProgramSummaryPageProps> = ({
     </div>
   );
 };
+
