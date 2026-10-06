@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import { CreditCard, CalendarDays, ArrowRight, ArrowLeft, CheckCircle2, ShieldCheck, Headphones } from 'lucide-react';
 import type { PaymentMethodType, EnrollmentState } from '../../types';
@@ -38,7 +38,7 @@ export const PaymentMethodPage: React.FC<PaymentMethodPageProps> = ({
       note: isRetargetingOrRetention ? undefined : `Official Registration Link: ${fullPaymentInfo.link}`,
       icon: (
         <div className="w-11 h-11 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-[#0B63E5] font-black text-xl">
-          ₹
+          â‚¹
         </div>
       ),
     },
@@ -55,10 +55,10 @@ export const PaymentMethodPage: React.FC<PaymentMethodPageProps> = ({
     },
     {
       id: 'NO_COST_EMI' as PaymentMethodType,
-      title: 'No-Cost EMI',
+      title: (state.program?.name?.toLowerCase().includes('iit') || state.program?.name?.toLowerCase().includes('ocn')) ? 'EMI' : 'No-Cost EMI',
       badge: 'Popular Option',
       description: 'Spread the program fee into monthly instalments.',
-      note: 'If you choose EMI, we’ll explain the process before asking for any financing details.',
+      note: 'If you choose EMI, weâ€™ll explain the process before asking for any financing details.',
       icon: (
         <div className="w-11 h-11 rounded-xl bg-sky-50 border border-sky-100 flex items-center justify-center text-sky-600">
           <CalendarDays className="w-5 h-5" />
@@ -236,3 +236,4 @@ export const PaymentMethodPage: React.FC<PaymentMethodPageProps> = ({
     </div>
   );
 };
+

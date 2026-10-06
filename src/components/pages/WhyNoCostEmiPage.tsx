@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+﻿import React, { useState, useRef } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import {
   Play,
@@ -36,63 +36,63 @@ const EMI_SUBTITLE_CUES: EmiSubtitleCue[] = [
     start: 0,
     end: 6.6,
     textEn: 'You want to join Nxtwave, but paying the entire program fee upfront is a massive roadblock.',
-    textTe: 'మీరు నెక్స్ట్‌వేవ్‌లో చేరాలనుకుంటున్నారు, కానీ మొత్తం ఫీజును ఒకేసారి చెల్లించడం ఒక పెద్ద అడ్డంకిగా అనిపించవచ్చు.',
+    textTe: 'à°®à±€à°°à± à°¨à±†à°•à±à°¸à±à°Ÿà±â€Œà°µà±‡à°µà±â€Œà°²à±‹ à°šà±‡à°°à°¾à°²à°¨à±à°•à±à°‚à°Ÿà±à°¨à±à°¨à°¾à°°à±, à°•à°¾à°¨à±€ à°®à±Šà°¤à±à°¤à°‚ à°«à±€à°œà±à°¨à± à°’à°•à±‡à°¸à°¾à°°à°¿ à°šà±†à°²à±à°²à°¿à°‚à°šà°¡à°‚ à°’à°• à°ªà±†à°¦à±à°¦ à°…à°¡à±à°¡à°‚à°•à°¿à°—à°¾ à°…à°¨à°¿à°ªà°¿à°‚à°šà°µà°šà±à°šà±.',
   },
   {
     id: 2,
     start: 6.6,
     end: 13.0,
     textEn: 'So when you stare at that daunting checkout screen, you do not have to hunt for bank loans alone.',
-    textTe: 'చెక్‌అవుట్ స్క్రీన్‌ను చూసి మీరు ఆందోళన చెందాల్సిన పనిలేదు. మేము మీకు అండగా ఉంటాము.',
+    textTe: 'à°šà±†à°•à±â€Œà°…à°µà±à°Ÿà± à°¸à±à°•à±à°°à±€à°¨à±â€Œà°¨à± à°šà±‚à°¸à°¿ à°®à±€à°°à± à°†à°‚à°¦à±‹à°³à°¨ à°šà±†à°‚à°¦à°¾à°²à±à°¸à°¿à°¨ à°ªà°¨à°¿à°²à±‡à°¦à±. à°®à±‡à°®à± à°®à±€à°•à± à°…à°‚à°¡à°—à°¾ à°‰à°‚à°Ÿà°¾à°®à±.',
   },
   {
     id: 3,
     start: 13.0,
     end: 19.4,
     textEn: 'Nxtwave teams up with specialized financing partners to make your education accessible and affordable.',
-    textTe: 'బ్యాంక్ లోన్ల కోసం మీరు ఒక్కరే తిరగాల్సిన పనిలేదు. నెక్స్ట్‌వేవ్ ప్రముఖ ఫైనాన్సింగ్ భాగస్వాములతో పనిచేస్తుంది.',
+    textTe: 'à°¬à±à°¯à°¾à°‚à°•à± à°²à±‹à°¨à±à°² à°•à±‹à°¸à°‚ à°®à±€à°°à± à°’à°•à±à°•à°°à±‡ à°¤à°¿à°°à°—à°¾à°²à±à°¸à°¿à°¨ à°ªà°¨à°¿à°²à±‡à°¦à±. à°¨à±†à°•à±à°¸à±à°Ÿà±â€Œà°µà±‡à°µà± à°ªà±à°°à°®à±à°– à°«à±ˆà°¨à°¾à°¨à±à°¸à°¿à°‚à°—à± à°­à°¾à°—à°¸à±à°µà°¾à°®à±à°²à°¤à±‹ à°ªà°¨à°¿à°šà±‡à°¸à±à°¤à±à°‚à°¦à°¿.',
   },
   {
     id: 4,
     start: 19.4,
     end: 26.6,
     textEn: 'Here is how it works: That solid block of your total fee gets divided into equal monthly slices.',
-    textTe: 'ఇది ఎలా పనిచేస్తుందంటే: మీ మొత్తం ఫీజు సమానమైన నెలవారీ వాయిదాలుగా విభజించబడుతుంది.',
+    textTe: 'à°‡à°¦à°¿ à°Žà°²à°¾ à°ªà°¨à°¿à°šà±‡à°¸à±à°¤à±à°‚à°¦à°‚à°Ÿà±‡: à°®à±€ à°®à±Šà°¤à±à°¤à°‚ à°«à±€à°œà± à°¸à°®à°¾à°¨à°®à±ˆà°¨ à°¨à±†à°²à°µà°¾à°°à±€ à°µà°¾à°¯à°¿à°¦à°¾à°²à±à°—à°¾ à°µà°¿à°­à°œà°¿à°‚à°šà°¬à°¡à±à°¤à±à°‚à°¦à°¿.',
   },
   {
     id: 5,
     start: 26.6,
     end: 36.3,
     textEn: 'With a zero-percent interest payment plan, you pay the exact original fee with zero extra interest.',
-    textTe: 'జీరో పర్సెంట్ ఇంట్రెస్ట్ ప్లాన్‌తో, మీరు అసలు ఫీజును మాత్రమే చెల్లిస్తారు. ఎలాంటి అదనపు వడ్డీ ఉండదు.',
+    textTe: 'à°œà±€à°°à±‹ à°ªà°°à±à°¸à±†à°‚à°Ÿà± à°‡à°‚à°Ÿà±à°°à±†à°¸à±à°Ÿà± à°ªà±à°²à°¾à°¨à±â€Œà°¤à±‹, à°®à±€à°°à± à°…à°¸à°²à± à°«à±€à°œà±à°¨à± à°®à°¾à°¤à±à°°à°®à±‡ à°šà±†à°²à±à°²à°¿à°¸à±à°¤à°¾à°°à±. à°Žà°²à°¾à°‚à°Ÿà°¿ à°…à°¦à°¨à°ªà± à°µà°¡à±à°¡à±€ à°‰à°‚à°¡à°¦à±.',
   },
   {
     id: 6,
     start: 36.3,
     end: 46.4,
     textEn: 'Because most students lack an income history, you need an earning co-applicant, like a working parent.',
-    textTe: 'విద్యార్థులకు స్వంత ఆదాయం ఉండదు కాబట్టి, సంపాదిస్తున్న తల్లిదండ్రులను కో-అప్లికెంట్‌గా ఎంచుకోవాలి.',
+    textTe: 'à°µà°¿à°¦à±à°¯à°¾à°°à±à°¥à±à°²à°•à± à°¸à±à°µà°‚à°¤ à°†à°¦à°¾à°¯à°‚ à°‰à°‚à°¡à°¦à± à°•à°¾à°¬à°Ÿà±à°Ÿà°¿, à°¸à°‚à°ªà°¾à°¦à°¿à°¸à±à°¤à±à°¨à±à°¨ à°¤à°²à±à°²à°¿à°¦à°‚à°¡à±à°°à±à°²à°¨à± à°•à±‹-à°…à°ªà±à°²à°¿à°•à±†à°‚à°Ÿà±â€Œà°—à°¾ à°Žà°‚à°šà±à°•à±‹à°µà°¾à°²à°¿.',
   },
   {
     id: 7,
     start: 46.4,
     end: 57.9,
     textEn: 'Nxtwave provides the education, while the financing partner independently evaluates and approves you.',
-    textTe: 'నెక్స్ట్‌వేవ్ కేవలం విద్యను మాత్రమే అందిస్తుంది. ఫైనాన్సింగ్ భాగస్వామి స్వతంత్రంగా ఆమోదం తెలుపుతుంది.',
+    textTe: 'à°¨à±†à°•à±à°¸à±à°Ÿà±â€Œà°µà±‡à°µà± à°•à±‡à°µà°²à°‚ à°µà°¿à°¦à±à°¯à°¨à± à°®à°¾à°¤à±à°°à°®à±‡ à°…à°‚à°¦à°¿à°¸à±à°¤à±à°‚à°¦à°¿. à°«à±ˆà°¨à°¾à°¨à±à°¸à°¿à°‚à°—à± à°­à°¾à°—à°¸à±à°µà°¾à°®à°¿ à°¸à±à°µà°¤à°‚à°¤à±à°°à°‚à°—à°¾ à°†à°®à±‹à°¦à°‚ à°¤à±†à°²à±à°ªà±à°¤à±à°‚à°¦à°¿.',
   },
   {
     id: 8,
     start: 57.9,
     end: 66.6,
     textEn: 'Once approved, the gate opens. Those monthly blocks lock into an automated sequence for hassle-free repayment.',
-    textTe: 'ఆమోదం పొందిన వెంటనే, సులభమైన రీపేమెంట్ కోసం నెలవారీ వాయిదాలు ఆటోమేటిక్‌గా ప్రారంభమవుతాయి.',
+    textTe: 'à°†à°®à±‹à°¦à°‚ à°ªà±Šà°‚à°¦à°¿à°¨ à°µà±†à°‚à°Ÿà°¨à±‡, à°¸à±à°²à°­à°®à±ˆà°¨ à°°à±€à°ªà±‡à°®à±†à°‚à°Ÿà± à°•à±‹à°¸à°‚ à°¨à±†à°²à°µà°¾à°°à±€ à°µà°¾à°¯à°¿à°¦à°¾à°²à± à°†à°Ÿà±‹à°®à±‡à°Ÿà°¿à°•à±â€Œà°—à°¾ à°ªà±à°°à°¾à°°à°‚à°­à°®à°µà±à°¤à°¾à°¯à°¿.',
   },
   {
     id: 9,
     start: 66.6,
     end: 78.3,
     textEn: 'Instead of stressing over the total, you can rely on a monthly plan, letting you focus entirely on your new tech career.',
-    textTe: 'ఒకేసారి ఫీజు భారం లేకుండా, సౌకర్యవంతమైన నెలవారీ ప్లాన్‌తో మీరు పూర్తిగా మీ టెక్ కెరీర్ నిర్మాణంపై దృష్టి పెట్టవచ్చు.',
+    textTe: 'à°’à°•à±‡à°¸à°¾à°°à°¿ à°«à±€à°œà± à°­à°¾à°°à°‚ à°²à±‡à°•à±à°‚à°¡à°¾, à°¸à±Œà°•à°°à±à°¯à°µà°‚à°¤à°®à±ˆà°¨ à°¨à±†à°²à°µà°¾à°°à±€ à°ªà±à°²à°¾à°¨à±â€Œà°¤à±‹ à°®à±€à°°à± à°ªà±‚à°°à±à°¤à°¿à°—à°¾ à°®à±€ à°Ÿà±†à°•à± à°•à±†à°°à±€à°°à± à°¨à°¿à°°à±à°®à°¾à°£à°‚à°ªà±ˆ à°¦à±ƒà°·à±à°Ÿà°¿ à°ªà±†à°Ÿà±à°Ÿà°µà°šà±à°šà±.',
   },
 ];
 
@@ -108,6 +108,7 @@ export const WhyNoCostEmiPage: React.FC<WhyNoCostEmiPageProps> = ({
   onBack,
 }) => {
   const prefersReducedMotion = useReducedMotion();
+  const isIitOcn = state.program?.name?.toLowerCase().includes('iit') || state.program?.name?.toLowerCase().includes('ocn');
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -229,10 +230,10 @@ export const WhyNoCostEmiPage: React.FC<WhyNoCostEmiPageProps> = ({
         <div className="w-full text-center mb-4">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-100 text-xs font-semibold text-[#0B63E5] mb-2">
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Financing &amp; No-Cost EMI Guide</span>
+            <span>{isIitOcn ? 'Financing & EMI Guide' : 'Financing & No-Cost EMI Guide'}</span>
           </div>
           <h1 className="text-xl sm:text-2xl font-bold text-[#0A192F] tracking-tight">
-            How No-Cost EMI Works
+            {isIitOcn ? 'How EMI Works' : 'How No-Cost EMI Works'}
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-sm mx-auto">
             Watch the video explainer to understand the 0% interest monthly plan and co-applicant process.
@@ -266,7 +267,7 @@ export const WhyNoCostEmiPage: React.FC<WhyNoCostEmiPageProps> = ({
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
-              తెలుగు (Telugu)
+              à°¤à±†à°²à±à°—à± (Telugu)
             </button>
           </div>
         </div>
@@ -449,7 +450,7 @@ export const WhyNoCostEmiPage: React.FC<WhyNoCostEmiPageProps> = ({
           </div>
           <ul className="space-y-1.5 text-slate-600 pl-4 list-disc">
             <li>
-              <strong>Zero Extra Interest:</strong> You only pay the net course fee of ₹1,12,000 divided into 6 equal monthly installments (~₹18,667/mo).
+              <strong>Zero Extra Interest:</strong> You only pay the net course fee of â‚¹1,12,000 divided into 6 equal monthly installments (~â‚¹18,667/mo).
             </li>
             <li>
               <strong>Independent NBFC Evaluation:</strong> Applications are evaluated by RBI-registered partner NBFCs (Northern Arc, Fibe) based on credit bureau score and banking records.
@@ -478,7 +479,7 @@ export const WhyNoCostEmiPage: React.FC<WhyNoCostEmiPageProps> = ({
             onClick={onContinue}
             className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-[#0B63E5] text-white text-xs sm:text-sm font-semibold hover:bg-blue-600 transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer"
           >
-            <span>Continue with No-Cost EMI</span>
+            <span>{isIitOcn ? 'Continue with EMI' : 'Continue with No-Cost EMI'}</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </div>
@@ -486,3 +487,5 @@ export const WhyNoCostEmiPage: React.FC<WhyNoCostEmiPageProps> = ({
     </div>
   );
 };
+
+

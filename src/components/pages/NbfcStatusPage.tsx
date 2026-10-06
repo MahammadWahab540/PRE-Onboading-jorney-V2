@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import {
   Building2,
@@ -261,11 +261,12 @@ export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
   ];
 
   const currentTeam = state.learner?.currentTeam || '';
+  const isIitOcn = state.program?.name?.toLowerCase().includes('iit') || state.program?.name?.toLowerCase().includes('ocn');
   const isRetargetingOrRetention = currentTeam.toLowerCase() === 'retargeting' || currentTeam.toLowerCase() === 'retention';
 
   const faqs = [
     {
-      q: 'How does the 0% No-Cost EMI work?',
+      q: isIitOcn ? 'How does the EMI work?' : 'How does the 0% No-Cost EMI work?',
       a: 'NxtWave subvents the interest directly with the lending partner so you only pay the exact program fee in equal monthly installments without any hidden interest charges or upfront processing fees.',
     },
     {
@@ -274,7 +275,7 @@ export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
     },
     {
       q: 'What is an e-NACH Auto-Debit Mandate?',
-      a: 'e-NACH is a secure, RBI-mandated digital banking authorization that allows your monthly EMI to be automatically debited from your co-applicant’s bank account on a fixed date each month.',
+      a: 'e-NACH is a secure, RBI-mandated digital banking authorization that allows your monthly EMI to be automatically debited from your co-applicantâ€™s bank account on a fixed date each month.',
     }
   ];
 
@@ -311,8 +312,8 @@ export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
               <ShieldCheck className="w-4 h-4" />
             </div>
             <div>
-              <span className="text-xs font-bold text-emerald-900 block">0% Interest No-Cost Educational EMI</span>
-              <span className="text-[11px] text-emerald-700">Zero hidden fees • Subsidized by NxtWave • Equal monthly installments</span>
+              <span className="text-xs font-bold text-emerald-900 block">{isIitOcn ? 'Educational EMI' : '0% Interest No-Cost Educational EMI'}</span>
+              <span className="text-[11px] text-emerald-700">Zero hidden fees â€¢ Subsidized by NxtWave â€¢ Equal monthly installments</span>
             </div>
           </div>
           <div className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-800 bg-white/80 px-2.5 py-1 rounded-full border border-emerald-200">
@@ -403,7 +404,7 @@ export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
 
                 {nbfcData.guidanceMessage && (
                   <p className="text-xs text-slate-600 mt-1.5 leading-relaxed bg-white/70 p-2.5 rounded-lg border border-slate-200/60">
-                    💡 <strong className="text-slate-800">What to expect:</strong> {nbfcData.guidanceMessage}
+                    ðŸ’¡ <strong className="text-slate-800">What to expect:</strong> {nbfcData.guidanceMessage}
                   </p>
                 )}
 
@@ -762,3 +763,6 @@ export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
     </div>
   );
 };
+
+
+
