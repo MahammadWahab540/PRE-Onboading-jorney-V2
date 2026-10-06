@@ -233,11 +233,16 @@ export const WhyNoCostEmiPage: React.FC<WhyNoCostEmiPageProps> = ({
             <span>{isIitOcn ? 'Financing & EMI Guide' : 'Financing & No-Cost EMI Guide'}</span>
           </div>
           <h1 className="text-xl sm:text-2xl font-bold text-[#0A192F] tracking-tight">
-            {isIitOcn ? 'How EMI Works' : 'How No-Cost EMI Works'}
+            If you choose {isIitOcn ? 'EMI' : 'No-Cost EMI'}
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-sm mx-auto">
-            Watch the video explainer to understand the 0% interest monthly plan and co-applicant process.
-          </p>
+          <div className="text-xs sm:text-sm text-slate-500 mt-2 space-y-2 max-w-md mx-auto">
+            <p>
+              Before you continue, we'll explain how the payment plan works, including the monthly payment, financing process, and any applicable charges.
+            </p>
+            <p>
+              Watch the short video to understand the EMI process, co-applicant requirements, and what happens after you apply.
+            </p>
+          </div>
 
           {/* Language Switcher */}
           <div className="flex items-center justify-center gap-1.5 mt-3">
@@ -442,23 +447,48 @@ export const WhyNoCostEmiPage: React.FC<WhyNoCostEmiPageProps> = ({
           </div>
         </div>
 
-        {/* TRANSPARENT FINANCING & REGULATORY COMPLIANCE DISCLOSURE */}
-        <div className="w-full mt-6 p-4 rounded-xl bg-slate-50 border border-slate-200/90 text-left text-xs space-y-2">
-          <div className="flex items-center gap-2 font-bold text-slate-800">
+        {/* PAYMENT PLAN & ELIGIBILITY */}
+        <div className="w-full mt-6 p-4 rounded-xl bg-slate-50 border border-slate-200/90 text-left text-xs space-y-3">
+          <div className="flex items-center gap-2 font-bold text-slate-800 text-sm border-b border-slate-200 pb-2">
             <span className="w-2 h-2 rounded-full bg-blue-500" />
-            <span>Key Financing Facts & Eligibility</span>
+            <span>Payment Plan & Eligibility</span>
           </div>
-          <ul className="space-y-1.5 text-slate-600 pl-4 list-disc">
-            <li>
-              <strong>Zero Extra Interest:</strong> You only pay the net course fee of â‚¹1,12,000 divided into 6 equal monthly installments (~â‚¹18,667/mo).
-            </li>
-            <li>
-              <strong>Independent NBFC Evaluation:</strong> Applications are evaluated by RBI-registered partner NBFCs (Northern Arc, Fibe) based on credit bureau score and banking records.
-            </li>
-            <li>
-              <strong>Credit Profile Dependent:</strong> Final approval and disbursement are subject to NBFC underwriting criteria and document verification.
-            </li>
-          </ul>
+          
+          {isIitOcn ? (
+            <ul className="space-y-2.5 text-slate-600">
+              <li>
+                <strong className="text-slate-800 block mb-0.5">EMI Financing Available</strong>
+                You can choose to pay your program fee through monthly installments. Interest or financing charges may apply depending on the selected lender, tenure, and approved financing plan.
+              </li>
+              <li>
+                <strong className="text-slate-800 block mb-0.5">Know Your Payment Before You Continue</strong>
+                We’ll show you the applicable EMI amount, tenure, interest or financing charges, and total repayment before you proceed with the financing application.
+              </li>
+              <li>
+                <strong className="text-slate-800 block mb-0.5">Financing Partner Approval</strong>
+                Applications are evaluated independently by the applicable lending partner based on eligibility, credit profile, banking information, and verification requirements.
+              </li>
+              <li>
+                <strong className="text-slate-800 block mb-0.5">Approval is Subject to Eligibility</strong>
+                Loan approval, applicable interest rate, EMI amount, and disbursement are determined by the financing partner after completing their underwriting process.
+              </li>
+            </ul>
+          ) : (
+            <ul className="space-y-2.5 text-slate-600">
+              <li>
+                <strong className="text-slate-800 block mb-0.5">No-Cost EMI</strong>
+                Pay your program fee in convenient monthly installments with no additional interest, subject to lender approval and the applicable financing plan.
+              </li>
+              <li>
+                <strong className="text-slate-800 block mb-0.5">Financing Partner Approval</strong>
+                Your application may be evaluated by our lending partners based on their eligibility, credit, and verification criteria.
+              </li>
+              <li>
+                <strong className="text-slate-800 block mb-0.5">Approval is Subject to Eligibility</strong>
+                Final approval depends on the lender’s underwriting process, required documents, credit profile, and verification checks.
+              </li>
+            </ul>
+          )}
         </div>
 
         {/* Action Buttons */}
