@@ -139,12 +139,49 @@ export function mapSalesforceToJourney(
       ? learnerName.split(' ')[0] || 'Learner'
       : 'Learner';
 
-  const baseFee = record.Product_Price__c || 0;
-  const scholarshipAmount = record.Payment_Plan_Discount__c ?? record.Scholarship_Amount__c ?? record.Merit_Scholarship_Amount_PRE__c ?? 0;
-  const seatReservationPaid = record.Total_Amount_PRE__c ?? record.Seat_Reservation_Amount_Paid__c ?? 0;
-  const amountToBeReceived = record.Amount_to_be_Receive__c ?? record.Amount_Payable_PRE__c ?? Math.max(0, baseFee - scholarshipAmount);
+  let baseFee = record.Product_Price__c || 0;
+  let scholarshipAmount = record.Payment_Plan_Discount__c ?? record.Scholarship_Amount__c ?? record.Merit_Scholarship_Amount_PRE__c ?? 0;
+  let seatReservationPaid = record.Total_Amount_PRE__c ?? record.Seat_Reservation_Amount_Paid__c ?? 0;
+  let remainingAmountPayable = record.Remaining_Amount_To_Be_Paid_PRE__c ?? 0;
+  let amountToBeReceived = record.Amount_to_be_Receive__c ?? record.Amount_Payable_PRE__c ?? Math.max(0, baseFee - scholarshipAmount);
+  let emiTenureMonths = 6;
+
+  // IIT OCN Config Driven Amounts
+  const programName = record.Program_PRE__c || '';
+  const isIitOcn = programName.toLowerCase().includes('iit') || programName.toLowerCase().includes('ocn');
+
+  if (isIitOcn) {
+    const rawTenure = record.EMI_Tenure_PRE__c || '6';
+    const tenureMatch = rawTenure.match(/\d+/);
+    emiTenureMonths = tenureMatch ? parseInt(tenureMatch[0], 10) : 6;
+    
+    const iitConfig: Record<number, { discount: number, pending: number }> = {
+      3: { discount: 20000, pending: 82000 },
+      6: { discount: 20000, pending: 82000 },
+      9: { discount: 10160, pending: 91840 },
+      12: { discount: 8520, pending: 93480 },
+      18: { discount: 2780, pending: 99220 },
+    };
+
+    const selectedConfig = iitConfig[emiTenureMonths] || iitConfig[6];
+
+    if (!baseFee) baseFee = 120000;
+    if (!seatReservationPaid) seatReservationPaid = 18000;
+    if (!scholarshipAmount) scholarshipAmount = selectedConfig.discount;
+    if (!remainingAmountPayable) remainingAmountPayable = selectedConfig.pending;
+    
+    // Total amount to be paid by user is pending amount (to be loaned) + the amount they already paid
+    if (!record.Amount_to_be_Receive__c && !record.Amount_Payable_PRE__c) {
+      amountToBeReceived = remainingAmountPayable + seatReservationPaid;
+    }
+  } else {
+    // Parse normal tenure for non-IIT programs if available
+    const rawTenure = record.EMI_Tenure_PRE__c || '6';
+    const tenureMatch = rawTenure.match(/\d+/);
+    if (tenureMatch) emiTenureMonths = parseInt(tenureMatch[0], 10);
+  }
+
   const amountPayable = amountToBeReceived;
-  const remainingAmountPayable = record.Remaining_Amount_To_Be_Paid_PRE__c ?? 0;
 
   const paymentMethod = mapPaymentMethod(record.Payment_Plan_PRE__c);
   const paymentStatus = mapPaymentStatus(
@@ -199,20 +236,22 @@ export function mapSalesforceToJourney(
   let financing;
   if (paymentMethod === 'NO_COST_EMI' || record.Applied_Loan_Amount__c) {
     const mappedNbfc = mapNbfcStatus(record);
-    const tenureMonths = 6;
-    const emiMonthly = Math.round(amountPayable / tenureMonths);
+    const principalAmount = remainingAmountPayable || amountPayable;
+    const emiMonthly = isIitOcn 
+      ? Math.round(principalAmount / emiTenureMonths * 100) / 100
+      : Math.round(principalAmount / emiTenureMonths);
 
     financing = {
       applied: true,
-      appliedAmount: record.Applied_Loan_Amount__c || amountPayable,
+      appliedAmount: record.Applied_Loan_Amount__c || principalAmount,
       nbfcName: mappedNbfc.lenderName,
       applicationId: `NBFC-${record.Id.slice(-6).toUpperCase()}`,
       status: mappedNbfc.status,
       statusLabel: mappedNbfc.statusLabel,
-      approvedAmount: record.Effective_Approved_Amount__c || amountPayable,
-      approvedTenure: `${tenureMonths} Months`,
+      approvedAmount: record.Effective_Approved_Amount__c || principalAmount,
+      approvedTenure: `${emiTenureMonths} Months`,
       emiAmountMonthly: emiMonthly,
-      emiTenure: record.EMI_Tenure_PRE__c || `${tenureMonths} Months`,
+      emiTenure: record.EMI_Tenure_PRE__c || `${emiTenureMonths} Months`,
       disbursedAmount: record.Disbursed_Amount_PRE__c,
       disbursedAt: record.Disbursed_Date_Time__c,
       rejectionReason: mappedNbfc.rejectionReason,
