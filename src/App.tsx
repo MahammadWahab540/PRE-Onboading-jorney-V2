@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import type {
   PortalRoute,
@@ -294,7 +294,7 @@ export default function App() {
             if (parsedRoute && parsedRoute !== 'auth' && requestedIndex >= serverIndex) {
               if (parsedRoute === 'class-access' && !isClassUnlocked) {
                 console.log(
-                  `[EnrollmentSync] 🛡️ Route Guard: Class access is locked. Redirecting from '/class-access' to authoritative stage '${serverRoute}'.`
+                  `[EnrollmentSync] ðŸ›¡ï¸ Route Guard: Class access is locked. Redirecting from '/class-access' to authoritative stage '${serverRoute}'.`
                 );
                 targetRoute = serverRoute;
               } else {
@@ -303,7 +303,7 @@ export default function App() {
             } else {
               if (parsedRoute && requestedIndex < serverIndex) {
                 console.log(
-                  `[EnrollmentSync] 🛡️ Route Guard auto-redirect: URL route '${parsedRoute}' (step #${requestedIndex}) regressed behind Salesforce stage route '${serverRoute}' (step #${serverIndex}). Redirecting to '${serverRoute}'.`
+                  `[EnrollmentSync] ðŸ›¡ï¸ Route Guard auto-redirect: URL route '${parsedRoute}' (step #${requestedIndex}) regressed behind Salesforce stage route '${serverRoute}' (step #${serverIndex}). Redirecting to '${serverRoute}'.`
                 );
               }
               targetRoute = serverRoute;
@@ -454,7 +454,7 @@ export default function App() {
           name: coApplicantData?.name || '',
           relation: coApplicantData?.relation || 'Parent',
           mobileMasked: coApplicantData?.mobile
-            ? `${coApplicantData.mobile.slice(0, 2)}•••••${coApplicantData.mobile.slice(-3)}`
+            ? `${coApplicantData.mobile.slice(0, 2)}â€¢â€¢â€¢â€¢â€¢${coApplicantData.mobile.slice(-3)}`
             : prev.coApplicant.mobileMasked,
         },
       }));
@@ -549,6 +549,7 @@ export default function App() {
             >
               <ProgramSummaryPage
                 state={state}
+                onUpdateProgramData={(updates) => setState(prev => ({ ...prev, program: { ...prev.program, ...updates } }))}
                 onNext={() => navigateTo('payment')}
                 onBack={() => navigateTo('congratulations')}
               />
@@ -708,12 +709,12 @@ export default function App() {
       {/* Footer */}
       <footer className="py-6 border-t border-slate-200/80 bg-white text-center text-xs text-slate-500">
         <div className="max-w-4xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p>© {new Date().getFullYear()} NxtWave Disruptive Technologies. All rights reserved.</p>
+          <p>Â© {new Date().getFullYear()} NxtWave Disruptive Technologies. All rights reserved.</p>
           <div className="flex items-center gap-4 text-[11px] text-slate-500">
             <span>Privacy Protected</span>
-            <span>•</span>
+            <span>â€¢</span>
             <span>256-bit SSL Secure</span>
-            <span>•</span>
+            <span>â€¢</span>
             <button
               type="button"
               onClick={() => setIsSupportOpen(true)}
@@ -721,7 +722,7 @@ export default function App() {
             >
               Support Helpline
             </button>
-            <span>•</span>
+            <span>â€¢</span>
             <a
               href="/admin"
               className="hover:text-[#0B63E5] underline hover:no-underline cursor-pointer font-medium"
@@ -734,3 +735,4 @@ export default function App() {
     </div>
   );
 }
+

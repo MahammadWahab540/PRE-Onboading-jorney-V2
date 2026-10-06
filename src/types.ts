@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Central TypeScript Type Definitions for NxtWave PRE Learner Portal
  * Re-exports canonical journey types and maintains backward-compatibility aliases.
  */
@@ -34,6 +34,9 @@ export interface ProgramInfo {
   seatReservationPaid?: number;
   amountToBeReceived?: number;
   remainingAmountPayable?: number;
+  selectedTenure?: number;
+  jodoGrade?: string;
+  emiAmount?: number;
 }
 
 export interface PaymentState {
@@ -121,3 +124,4 @@ export type PortalRoute =
   | 'kyc-slot'
   | 'kyc-readiness'
   | 'kyc-confirmation';
+
