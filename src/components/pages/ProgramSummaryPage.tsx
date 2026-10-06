@@ -1,18 +1,11 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import {
-  Award,
   CheckCircle2,
   ArrowRight,
   ArrowLeft,
   ChevronDown,
   ChevronUp,
-  ShieldCheck,
-  Tag,
-  BookOpen,
-  Sparkles,
-  Layers,
-  GraduationCap,
 } from 'lucide-react';
 import type { EnrollmentState } from '../../types';
 import { ProgramCurriculumVideoPlayer } from '../ProgramCurriculumVideoPlayer';
@@ -29,214 +22,177 @@ export const ProgramSummaryPage: React.FC<ProgramSummaryPageProps> = ({
   onBack,
 }) => {
   const prefersReducedMotion = useReducedMotion();
-  const isIitOcn = state.program?.name?.toLowerCase().includes('iit') || state.program?.name?.toLowerCase().includes('ocn');
   const [showCurriculumVideo, setShowCurriculumVideo] = useState(false);
 
-  // Commercial Pricing Data mapped directly to Salesforce fields:
-  // 1. Product_Price__c -> baseFee (full amount: â‚¹3,00,000)
-  // 2. Payment_Plan_Discount__c -> scholarshipAmount (discount: â‚¹50,000)
-  // 3. Amount_to_be_Receive__c -> amountToBeReceived (total to be paid by user: â‚¹2,50,000)
-  // 4. Total_Amount_PRE__c -> seatReservationPaid (seat reservation paid till now: â‚¹18,000)
-  // 5. Remaining_Amount_To_Be_Paid_PRE__c -> netRemainingPayable (remaining balance: â‚¹2,32,000)
-  const baseFee =
-    state?.program?.baseFee ||
-    state?.canonicalJourney?.program?.baseFee ||
-    0;
+  const program = state?.program || state?.canonicalJourney?.program || {};
+  const programName = program.name || 'NxtWave Smart Program';
+  const isIitOcn = programName.toLowerCase().includes('iit') || programName.toLowerCase().includes('ocn');
 
-  const amountToBeReceived =
-    state?.program?.amountToBeReceived ||
-    state?.program?.amountPayable ||
-    state?.canonicalJourney?.program?.amountToBeReceived ||
-    state?.canonicalJourney?.program?.amountPayable ||
-    0;
+  // Base values (fallback safely to 0 to prevent NaN)
+  const programFee = Number(program.baseFee) || 0;
+  const scholarshipAmount = Number(program.scholarshipAmount) || 0;
+  const amountAlreadyPaid = Number(program.seatReservationPaid) || 0;
 
-  const scholarshipAmount =
-    state?.program?.scholarshipAmount && state.program.scholarshipAmount > 0
-      ? state.program.scholarshipAmount
-      : state?.canonicalJourney?.program?.scholarshipAmount && state.canonicalJourney.program.scholarshipAmount > 0
-      ? state.canonicalJourney.program.scholarshipAmount
-      : baseFee > amountToBeReceived
-      ? baseFee - amountToBeReceived
-      : 0;
+  // Exact Calculation Rule:
+  // Program Fee - Scholarships / Discounts = Net Program Fee
+  // Net Program Fee - Amount Already Paid = Remaining Program Fee
+  const feeAfterScholarship = Math.max(programFee - scholarshipAmount, 0);
+  const remainingProgramFee = Math.max(feeAfterScholarship - amountAlreadyPaid, 0);
 
-  const seatReservationPaid =
-    state?.program?.seatReservationPaid ??
-    state?.canonicalJourney?.program?.seatReservationPaid ??
-    0;
+  // Currency Formatter
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0,
+    }).format(value);
+  };
 
-  const netRemainingPayable =
-    state?.program?.remainingAmountPayable ??
-    state?.canonicalJourney?.program?.remainingAmountPayable ??
-    0;
-
-  const programTitle = state?.program?.name || 'NxtWave Smart Program';
+  const isFullyPaid = programFee > 0 && remainingProgramFee === 0;
 
   return (
-    <div className="w-full max-w-2xl mx-auto px-4 py-8 sm:py-12">
+    <div className="w-full max-w-xl mx-auto px-4 py-6 sm:py-8">
       <motion.div
         initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35 }}
-        className="bg-white rounded-2xl shadow-sm border border-slate-200/90 p-6 sm:p-8"
+        className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 sm:p-7"
       >
-        {/* Top Header Badge */}
-        <div className="flex items-center justify-between mb-4">
-          <span className="text-xs font-bold text-[#0B63E5] uppercase tracking-wider bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
-            Admissions & Commercial Commitment
+        {/* Eyebrow & Status */}
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">
+            ENROLMENT SUMMARY
           </span>
-          <div className="flex items-center gap-1.5 text-xs text-emerald-700 font-semibold bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-700 text-xs font-bold whitespace-nowrap">
+            <CheckCircle2 className="w-3.5 h-3.5" />
             <span>Seat Reserved</span>
           </div>
         </div>
 
-        <h1 className="text-2xl sm:text-3xl font-bold text-[#0A192F] tracking-tight mb-2">
-          {programTitle} Program Details
+        {/* Heading */}
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight mb-2">
+          Review Your Program & Fee
         </h1>
-        <p className="text-sm text-slate-600 leading-relaxed mb-6">
-          Transparent fee summary and scholarship breakdown for your confirmed cohort enrollment.
+        <p className="text-xs sm:text-sm text-slate-500 mb-6 max-w-sm">
+          Confirm your enrolment details before choosing a payment option.
         </p>
 
-        {/* PRIMARY FOCUS: COMMERCIAL FEE & SCHOLARSHIP BREAKDOWN */}
-        <div className="bg-[#F8FAFC] border-2 border-[#E2E8F0] rounded-2xl p-5 sm:p-6 mb-8 shadow-xs">
-          <div className="flex items-center justify-between pb-3.5 mb-4 border-b border-slate-200">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-              Fee Item
-            </span>
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-              Amount (INR)
+        {/* Program Name */}
+        <div className="p-4 bg-[#F8FAFC] border border-slate-200 rounded-xl mb-6">
+          <span className="text-xs font-semibold text-slate-500 block mb-1">PROGRAM</span>
+          <span className="font-bold text-slate-800 text-sm sm:text-base">{programName}</span>
+        </div>
+
+        {/* FEE SUMMARY */}
+        <div className="mb-6 border border-slate-200 rounded-xl overflow-hidden">
+          <div className="bg-slate-50 border-b border-slate-200 px-4 py-3">
+            <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+              FEE SUMMARY
             </span>
           </div>
-
-          <div className="space-y-3 text-sm">
-            {/* 1. Base Program Fee */}
-            <div className="flex items-center justify-between">
-              <span className="text-slate-700 font-medium flex items-center gap-2">
-                <GraduationCap className="w-4 h-4 text-slate-400" />
-                <span>Program Fee (Full Cost)</span>
-              </span>
-              <span className="font-mono font-semibold text-slate-900">
-                â‚¹{baseFee.toLocaleString('en-IN')}
-              </span>
+          
+          <div className="p-4 space-y-3 text-sm">
+            {/* Base Program Fee */}
+            <div className="flex justify-between items-start">
+              <span className="text-slate-600 font-medium break-words pr-2">Program Fee</span>
+              <span className="font-mono font-medium text-slate-900 shrink-0">{formatCurrency(programFee)}</span>
             </div>
 
-            {/* 2. Merit Scholarship */}
-            <div className="flex items-center justify-between text-emerald-700">
-              <span className="font-medium flex items-center gap-2">
-                <Tag className="w-4 h-4 text-emerald-600" />
-                <span>Merit Scholarship Applied</span>
-              </span>
-              <span className="font-mono font-semibold">
-                -â‚¹{scholarshipAmount.toLocaleString('en-IN')}
-              </span>
+            {/* Scholarship Applied */}
+            {scholarshipAmount > 0 && (
+              <div className="flex justify-between items-start text-emerald-700">
+                <div className="flex flex-col pr-2">
+                  <span className="font-medium break-words">Scholarship Applied</span>
+                  <span className="text-[11px] opacity-80 break-words">Merit Scholarship</span>
+                </div>
+                <span className="font-mono font-medium shrink-0">−{formatCurrency(scholarshipAmount)}</span>
+              </div>
+            )}
+
+            {/* Subtotal Divider */}
+            <div className="pt-2 border-t border-slate-200/80" />
+
+            {/* Your Program Fee */}
+            <div className="flex justify-between items-start">
+              <span className="text-slate-800 font-semibold break-words pr-2">Your Program Fee</span>
+              <span className="font-mono font-semibold text-slate-900 shrink-0">{formatCurrency(feeAfterScholarship)}</span>
             </div>
 
-            {/* Subtotal: Total Amount to be Paid by User */}
-            <div className="flex items-center justify-between py-2 px-3 bg-[#0B63E5]/5 rounded-xl border border-blue-200/80 text-blue-900 font-semibold text-xs">
-              <span>Total Program Fee (After Scholarship)</span>
-              <span className="font-mono font-bold text-sm text-[#0B63E5]">
-                â‚¹{amountToBeReceived.toLocaleString('en-IN')}
-              </span>
-            </div>
-
-            {/* 3. Seat Reservation Fee Paid */}
-            {seatReservationPaid > 0 && (
-              <div className="flex items-center justify-between text-emerald-700 pt-1">
-                <span className="font-medium flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                  <span>Seat Reservation Fee (Paid Till Now)</span>
-                </span>
-                <span className="font-mono font-semibold">
-                  -â‚¹{seatReservationPaid.toLocaleString('en-IN')}
+            {/* Amount Already Paid */}
+            {(amountAlreadyPaid > 0 || remainingProgramFee === 0) && (
+              <div className="flex justify-between items-start text-emerald-700">
+                <div className="flex flex-col pr-2">
+                  <span className="font-medium break-words">Amount Already Paid</span>
+                  {amountAlreadyPaid > 0 && (
+                    <span className="text-[11px] opacity-80 break-words">Includes your seat reservation payment</span>
+                  )}
+                </div>
+                <span className="font-mono font-medium shrink-0">
+                  {amountAlreadyPaid > 0 ? `−${formatCurrency(amountAlreadyPaid)}` : formatCurrency(0)}
                 </span>
               </div>
             )}
 
-            {/* Divider Line */}
-            <div className="pt-3 border-t-2 border-slate-300/80" />
+            {/* Final Total Divider */}
+            <div className="pt-3 border-t-2 border-slate-300" />
 
-            {/* 4. Net Remaining Balance Payable */}
-            <div className="flex items-center justify-between pt-1 text-base sm:text-lg">
-              <div>
-                <span className="font-bold text-[#0A192F] block">Net Remaining Amount Payable</span>
-                <span className="text-xs text-slate-500 font-normal mt-0.5 block">
-                  {isIitOcn 
-                    ? "Varies based on tenure selected; includes applicable interest charges."
-                    : "All inclusive • zero hidden charges"}
-                </span>
+            {/* Remaining Program Fee */}
+            {isFullyPaid ? (
+              <div className="flex flex-col items-center justify-center py-4 bg-emerald-50 rounded-lg text-emerald-800 text-center">
+                <CheckCircle2 className="w-8 h-8 mb-2" />
+                <span className="font-bold text-lg">Program Fee Fully Paid</span>
               </div>
-              <span className="font-mono font-bold text-2xl text-[#0B63E5]">
-                â‚¹{netRemainingPayable.toLocaleString('en-IN')}
-              </span>
-            </div>
+            ) : (
+              <div className="pt-1">
+                <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
+                  <span className="font-bold text-slate-900 text-base break-words">Remaining Program Fee</span>
+                  <span className="font-mono font-bold text-3xl text-[#0B63E5] shrink-0">
+                    {formatCurrency(remainingProgramFee)}
+                  </span>
+                </div>
+                <div className="mt-3 text-xs text-slate-500 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                  <span className="block font-medium text-slate-700 mb-0.5">
+                    {isIitOcn 
+                      ? "Financing charges, if applicable, will be shown separately after you select an EMI option." 
+                      : "Payment and financing options will be shown on the next step."}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* PROGRAM HIGHLIGHTS GRID */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
-          <div className="p-3.5 rounded-xl border border-slate-200 bg-white">
-            <div className="flex items-start gap-2.5">
-              <Award className="w-4 h-4 text-[#0B63E5] shrink-0 mt-0.5" />
-              <div>
-                <span className="text-xs font-bold text-slate-900 block">
-                  Industry-Ready Certification
-                </span>
-                <span className="text-[11px] text-slate-500">
-                  NSDC-aligned curriculum co-designed by leading tech architects.
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="p-3.5 rounded-xl border border-slate-200 bg-white">
-            <div className="flex items-start gap-2.5">
-              <BookOpen className="w-4 h-4 text-[#0B63E5] shrink-0 mt-0.5" />
-              <div>
-                <span className="text-xs font-bold text-slate-900 block">
-                  Live Mentorship & Placement
-                </span>
-                <span className="text-[11px] text-slate-500">
-                  Dedicated mock interviews, resume feedback, and placement drives.
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* SECONDARY: CURRICULUM VIDEO EXPLAINER (ACCORDION / TOGGLE) */}
-        <div className="mb-8 border border-slate-200 rounded-xl overflow-hidden">
+        {/* PROGRAM OVERVIEW ACCORDION */}
+        <div className="mb-6 border border-slate-200 rounded-xl overflow-hidden">
           <button
             type="button"
             onClick={() => setShowCurriculumVideo((prev) => !prev)}
-            className="w-full px-4 py-3 bg-slate-50 hover:bg-slate-100 flex items-center justify-between text-xs font-bold text-slate-700 transition-colors cursor-pointer"
+            className="w-full px-4 py-3 bg-white hover:bg-slate-50 flex items-center justify-between text-xs sm:text-sm font-semibold text-[#0B63E5] transition-colors cursor-pointer"
           >
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-[#0B63E5]" />
-              <span>Curriculum & Program Video Overview (Optional)</span>
-            </div>
+            <span>View Program Overview</span>
             {showCurriculumVideo ? (
-              <ChevronUp className="w-4 h-4 text-slate-500" />
+              <ChevronUp className="w-4 h-4 shrink-0 ml-2" />
             ) : (
-              <ChevronDown className="w-4 h-4 text-slate-500" />
+              <ChevronDown className="w-4 h-4 shrink-0 ml-2" />
             )}
           </button>
 
           {showCurriculumVideo && (
-            <div className="p-4 bg-white border-t border-slate-200">
+            <div className="p-4 bg-slate-50 border-t border-slate-200">
               <ProgramCurriculumVideoPlayer />
             </div>
           )}
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-5 border-t border-slate-100">
+        {/* ACTION BUTTONS */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
           <button
             id="program-back-btn"
             type="button"
             onClick={onBack}
-            className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-slate-200 text-xs sm:text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+            className="w-full sm:w-auto px-5 py-3 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="w-4 h-4 shrink-0" />
             <span>Back</span>
           </button>
 
@@ -244,14 +200,13 @@ export const ProgramSummaryPage: React.FC<ProgramSummaryPageProps> = ({
             id="program-continue-btn"
             type="button"
             onClick={onNext}
-            className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-[#0B63E5] text-white text-xs sm:text-sm font-semibold hover:bg-blue-600 transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full sm:w-auto px-6 py-3 rounded-xl bg-[#0B63E5] text-white text-sm font-semibold hover:bg-blue-600 transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer"
           >
-            <span>Choose Payment Method</span>
-            <ArrowRight className="w-4 h-4" />
+            <span>{isFullyPaid ? 'Continue' : 'Continue to Payment Options'}</span>
+            {!isFullyPaid && <ArrowRight className="w-4 h-4 shrink-0" />}
           </button>
         </div>
       </motion.div>
     </div>
   );
 };
-
