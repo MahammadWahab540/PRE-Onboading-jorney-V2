@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { EnrollmentState, PortalRoute } from '../../types';
 import { NxtWaveHeader } from '../NxtWaveHeader';
 import { ProgressIndicator } from '../ProgressIndicator';
@@ -76,11 +76,20 @@ export const JOURNEY_STEPS = [
 ];
 
 export function computeActiveStepIndex(record: SalesforceRecord, journey?: any): number {
+  const status = (record.Onboarding_Status__c || '').trim().toLowerCase();
+
+  // If learner has remaining fees to be paid, active review point is Step 2: Program & Fee Summary
+  if (
+    record.Remaining_Amount_To_Be_Paid_PRE__c !== undefined &&
+    record.Remaining_Amount_To_Be_Paid_PRE__c > 0 &&
+    !['full payment done', 'disbursed'].includes(status)
+  ) {
+    return 2;
+  }
+
   if (journey && journey.journey && typeof journey.journey.stepIndex === 'number') {
     return journey.journey.stepIndex;
   }
-
-  const status = (record.Onboarding_Status__c || '').trim().toLowerCase();
 
   if (['full payment done', 'installments done', 'disbursed'].includes(status)) {
     return 7;
@@ -229,7 +238,7 @@ export const AdminPortal: React.FC = () => {
   const [previewRoute, setPreviewRoute] = useState<PortalRoute>('program');
 
   // Search by UID
-  const handleUidSearch = async (queryToSearch?: string) => {
+  const handleUidSearch = async (queryToSearch?: string, targetStep?: string) => {
     const q = (queryToSearch || searchQuery).trim();
     if (!q) {
       setError('Please enter a valid User UID or Salesforce ID');
@@ -256,10 +265,26 @@ export const AdminPortal: React.FC = () => {
       const matchedItem: AdminRecordItem = explicitlyActiveItem || data.data[0];
       setSelectedItem(matchedItem);
 
-      // Automatically jump to the exact step where progress is stopped
-      const stoppedStepIndex = computeActiveStepIndex(matchedItem.record, matchedItem.journey);
-      const matchedStep = JOURNEY_STEPS.find((s) => s.index === stoppedStepIndex);
-      setPreviewRoute(matchedStep ? matchedStep.route : 'program');
+      // Automatically jump to the exact step where progress is stopped, or requested step
+      if (targetStep) {
+        const found = JOURNEY_STEPS.find(
+          (s) =>
+            s.route === targetStep ||
+            String(s.index) === String(targetStep) ||
+            s.name.toLowerCase() === targetStep.toLowerCase()
+        );
+        setPreviewRoute(found ? found.route : 'program');
+      } else {
+        const stoppedStepIndex = computeActiveStepIndex(matchedItem.record, matchedItem.journey);
+        const matchedStep = JOURNEY_STEPS.find((s) => s.index === stoppedStepIndex);
+        setPreviewRoute(matchedStep ? matchedStep.route : 'program');
+      }
+
+      try {
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.set('q', q);
+        window.history.replaceState(null, '', currentUrl.pathname + currentUrl.search);
+      } catch (_) {}
     } catch (err: any) {
       setError(err.message || 'Error executing UID search');
       setSelectedItem(null);
@@ -267,6 +292,19 @@ export const AdminPortal: React.FC = () => {
       setIsSearching(false);
     }
   };
+
+  // Auto-search if q is provided in URL query parameters on load
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const qParam = params.get('q');
+      const stepParam = params.get('step') || params.get('stage') || params.get('route');
+      if (qParam) {
+        setSearchQuery(qParam);
+        handleUidSearch(qParam, stepParam || undefined);
+      }
+    } catch (_) {}
+  }, []);
 
   // If a user record is found, immediately display their read-only User UI at the stopped stage
   if (selectedItem) {
@@ -363,7 +401,14 @@ export const AdminPortal: React.FC = () => {
                   <button
                     key={step.index}
                     type="button"
-                    onClick={() => setPreviewRoute(step.route)}
+                    onClick={() => {
+                      setPreviewRoute(step.route);
+                      try {
+                        const url = new URL(window.location.href);
+                        url.searchParams.set('step', String(step.index));
+                        window.history.replaceState(null, '', url.pathname + url.search);
+                      } catch (_) {}
+                    }}
                     className={`px-3 py-1.5 rounded-lg font-medium transition cursor-pointer flex items-center gap-1.5 shrink-0 ${
                       isActive
                         ? 'bg-[#0B63E5] text-white font-bold shadow-xs'
