@@ -22,6 +22,7 @@ import { deriveJourneyStageAndRoute } from './src/server/domain/journeyEngine';
 import { normalizeNbfcStatus, resolveActiveLenderName } from './src/server/domain/nbfcStatusEngine';
 import type { PaymentMethod } from './src/types/journey';
 import { getFullPaymentInfo } from './src/utils/paymentLinks';
+import { isEligibleOnboardingRecord } from './src/server/domain/activeRecordResolver';
 
 const app = express();
 const PORT = 3000;
@@ -192,7 +193,22 @@ app.get('/api/admin/search', async (req, res) => {
   const query = (req.query.q as string || '').trim();
   try {
     const records = await salesforceClient.searchRecords(query, 30);
-    const mapped = records.map((r) => ({
+    // Sort records so active and eligible records are placed first
+    const sortedRecords = [...records].sort((a, b) => {
+      const aActive = a.Active__c === true;
+      const bActive = b.Active__c === true;
+      if (aActive !== bActive) return aActive ? -1 : 1;
+
+      const aEligible = isEligibleOnboardingRecord(a as any);
+      const bEligible = isEligibleOnboardingRecord(b as any);
+      if (aEligible !== bEligible) return aEligible ? -1 : 1;
+
+      const timeA = new Date((a as any).LastModifiedDate || (a as any).CreatedDate || 0).getTime();
+      const timeB = new Date((b as any).LastModifiedDate || (b as any).CreatedDate || 0).getTime();
+      return timeB - timeA;
+    });
+
+    const mapped = sortedRecords.map((r) => ({
       record: sanitizeAdminRecord(r),
       journey: mapSalesforceToJourney(r, r.Token__c || r.userId__c || r.Id),
       portalUrl: `/enrollment/${r.Token__c || r.userId__c || r.Id}`,

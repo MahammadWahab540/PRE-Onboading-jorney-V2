@@ -39,7 +39,7 @@ export const PaymentSuccessPage: React.FC<PaymentSuccessPageProps> = ({
         initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, scale: 0.96 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.4 }}
-        className="bg-white rounded-2xl shadow-sm border border-slate-200/90 p-6 sm:p-8 text-center"
+        className="bg-white rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100/80 backdrop-blur-sm p-6 sm:p-8 text-center"
       >
         {/* Large Success Icon */}
         <motion.div
@@ -52,8 +52,8 @@ export const PaymentSuccessPage: React.FC<PaymentSuccessPageProps> = ({
         </motion.div>
 
         {/* Heading & Supporting Copy */}
-        <h1 className="text-2xl sm:text-3xl font-bold text-[#0A192F] tracking-tight mb-2">
-          You’re enrolled!
+        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 tracking-tight mb-2">
+          You're enrolled!
         </h1>
         <p className="text-sm sm:text-base text-slate-600 leading-relaxed mb-8 max-w-sm mx-auto">
           Your payment has been received successfully.
@@ -65,7 +65,7 @@ export const PaymentSuccessPage: React.FC<PaymentSuccessPageProps> = ({
             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
               Amount Paid
             </span>
-            <span className="text-xl font-bold text-[#0A192F]">
+            <span className="text-xl font-extrabold tracking-tight text-slate-900">
               {formattedAmount}
             </span>
           </div>
@@ -74,7 +74,7 @@ export const PaymentSuccessPage: React.FC<PaymentSuccessPageProps> = ({
             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
               Receipt ID
             </span>
-            <span className="text-xs font-mono font-bold text-[#0B63E5] bg-blue-50 px-2 py-0.5 rounded border border-blue-200/60">
+            <span className="text-xs font-mono font-extrabold tracking-tight text-[#0B63E5] bg-blue-50 px-2 py-0.5 rounded border border-blue-200/60">
               {receiptId}
             </span>
           </div>
@@ -92,7 +92,7 @@ export const PaymentSuccessPage: React.FC<PaymentSuccessPageProps> = ({
             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
               Payment Status
             </span>
-            <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+            <span className="inline-flex items-center gap-1 text-xs font-extrabold tracking-tight text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
               <Check className="w-3 h-3 stroke-[3]" />
               <span>Completed</span>
             </span>
@@ -127,14 +127,14 @@ export const PaymentSuccessPage: React.FC<PaymentSuccessPageProps> = ({
           <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
             <div className="bg-white rounded-2xl max-w-md w-full p-6 text-left shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
               <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-4">
-                <div className="flex items-center gap-2 text-[#0A192F] font-bold text-base">
+                <div className="flex items-center gap-2 text-slate-900 font-extrabold tracking-tight text-base">
                   <FileText className="w-5 h-5 text-[#0B63E5]" />
                   <span>Official Payment Receipt</span>
                 </div>
                 <button
                   type="button"
                   onClick={() => setShowReceiptModal(false)}
-                  className="text-slate-400 hover:text-slate-600 text-sm font-bold p-1"
+                  className="text-slate-400 hover:text-slate-600 text-sm font-extrabold tracking-tight p-1"
                 >
                   ✕
                 </button>
@@ -143,23 +143,23 @@ export const PaymentSuccessPage: React.FC<PaymentSuccessPageProps> = ({
               <div className="bg-slate-50 p-4 rounded-xl space-y-2.5 text-xs text-slate-600 mb-5 font-mono">
                 <div className="flex justify-between">
                   <span>Learner:</span>
-                  <span className="font-bold text-slate-900">{state.learner.name || 'Learner'}</span>
+                  <span className="font-extrabold tracking-tight text-slate-900">{state.learner.name || 'Learner'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Program:</span>
-                  <span className="font-bold text-slate-900">NxtWave {state.program.name}</span>
+                  <span className="font-extrabold tracking-tight text-slate-900">NxtWave {state.program.name}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Receipt No:</span>
-                  <span className="font-bold text-slate-900">{receiptId}</span>
+                  <span className="font-extrabold tracking-tight text-slate-900">{receiptId}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Amount Paid:</span>
-                  <span className="font-bold text-emerald-700">{formattedAmount}</span>
+                  <span className="font-extrabold tracking-tight text-emerald-700">{formattedAmount}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Status:</span>
-                  <span className="font-bold text-emerald-700">VERIFIED & COMPLETED</span>
+                  <span className="font-extrabold tracking-tight text-emerald-700">VERIFIED & COMPLETED</span>
                 </div>
               </div>
 

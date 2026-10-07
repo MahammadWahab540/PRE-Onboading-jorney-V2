@@ -246,7 +246,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
         ? `userId__c = '${cleanSearch}' OR Program_Registered_UID_PRE__c = '${cleanSearch}' OR Id = '${cleanSearch}' OR DP_Order_ID_PRE__c = '${cleanSearch}' OR Name LIKE '%${cleanSearch}%'`
         : `userId__c = '${cleanSearch}' OR Program_Registered_UID_PRE__c = '${cleanSearch}' OR DP_Order_ID_PRE__c = '${cleanSearch}' OR Name LIKE '%${cleanSearch}%'`;
 
-      const soql = `SELECT ${ACADEMY_FIELDS} FROM Academy_Onboarding_PRE__c WHERE ${whereClause} ORDER BY LastModifiedDate DESC LIMIT 30`;
+      const soql = `SELECT ${ACADEMY_FIELDS} FROM Academy_Onboarding_PRE__c WHERE ${whereClause} ORDER BY Active__c DESC, LastModifiedDate DESC LIMIT 30`;
 
       let records = await querySalesforce(env, soql);
 
@@ -255,9 +255,20 @@ export const onRequest: PagesFunction<Env> = async (context) => {
         const fallbackWhere = isSfId
           ? `userId__c LIKE '%${cleanSearch}%' OR Program_Registered_UID_PRE__c LIKE '%${cleanSearch}%' OR Id LIKE '%${cleanSearch}%'`
           : `userId__c LIKE '%${cleanSearch}%' OR Program_Registered_UID_PRE__c LIKE '%${cleanSearch}%'`;
-        const fallbackSoql = `SELECT ${ACADEMY_FIELDS} FROM Academy_Onboarding_PRE__c WHERE ${fallbackWhere} ORDER BY LastModifiedDate DESC LIMIT 30`;
+        const fallbackSoql = `SELECT ${ACADEMY_FIELDS} FROM Academy_Onboarding_PRE__c WHERE ${fallbackWhere} ORDER BY Active__c DESC, LastModifiedDate DESC LIMIT 30`;
         records = await querySalesforce(env, fallbackSoql);
       }
+
+      // Sort records so active records are placed first
+      records.sort((a: any, b: any) => {
+        const aActive = a.Active__c === true;
+        const bActive = b.Active__c === true;
+        if (aActive !== bActive) return aActive ? -1 : 1;
+
+        const timeA = new Date(a.LastModifiedDate || a.CreatedDate || 0).getTime();
+        const timeB = new Date(b.LastModifiedDate || b.CreatedDate || 0).getTime();
+        return timeB - timeA;
+      });
 
       const mapped = records.map(sanitizeAndMapRecord);
       return new Response(

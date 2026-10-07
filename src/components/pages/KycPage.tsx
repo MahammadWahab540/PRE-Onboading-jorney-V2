@@ -92,11 +92,11 @@ export const KycPage: React.FC<KycPageProps> = ({
         initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35 }}
-        className="bg-white rounded-2xl shadow-sm border border-slate-200/90 p-6 sm:p-8"
+        className="bg-white rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100/80 backdrop-blur-sm p-6 sm:p-8"
       >
         {/* Top Tag & Title */}
         <div className="flex items-center justify-between mb-4">
-          <span className="text-xs font-bold text-[#0B63E5] uppercase tracking-wider bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
+          <span className="text-xs font-extrabold tracking-tight text-[#0B63E5] uppercase tracking-wider bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
             Digital KYC Verification
           </span>
           <span className="text-xs text-slate-500 font-medium">
@@ -104,11 +104,11 @@ export const KycPage: React.FC<KycPageProps> = ({
           </span>
         </div>
 
-        <h1 className="text-2xl sm:text-3xl font-bold text-[#0A192F] tracking-tight mb-2">
-          Verify Documents &amp; Identity
+        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 tracking-tight mb-2">
+          Verify your identity
         </h1>
         <p className="text-sm text-slate-600 leading-relaxed mb-6">
-          Fast, asynchronous verification through DigiLocker and bank statement upload. No video scheduling required.
+          Complete your verification instantly using DigiLocker and your bank statements.
         </p>
 
         {/* -------------------------------------------------------------
@@ -139,7 +139,7 @@ export const KycPage: React.FC<KycPageProps> = ({
                 <XCircle className="w-5 h-5" />
               </div>
               <div className="flex-1">
-                <h3 className="text-base font-bold text-rose-900">KYC Verification Unsuccessful</h3>
+                <h3 className="text-base font-extrabold tracking-tight text-rose-900">KYC Verification Unsuccessful</h3>
                 <p className="text-xs text-rose-700 mt-1 leading-relaxed">
                   {kyc?.rejectionReason ||
                     'Document records could not be verified against the official bureau registry. You can nominate an alternate earning co-applicant or complete enrollment via direct fee payment.'}
@@ -180,10 +180,10 @@ export const KycPage: React.FC<KycPageProps> = ({
                 <CheckCircle2 className="w-5 h-5" />
               </div>
               <div className="flex-1">
-                <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider bg-emerald-200/60 px-2 py-0.5 rounded-md border border-emerald-300">
+                <span className="text-[11px] font-extrabold tracking-tight text-emerald-800 uppercase tracking-wider bg-emerald-200/60 px-2 py-0.5 rounded-md border border-emerald-300">
                   KYC Verified
                 </span>
-                <h3 className="text-base font-bold text-emerald-950 mt-1">
+                <h3 className="text-base font-extrabold tracking-tight text-emerald-950 mt-1">
                   Identity &amp; Documents Approved
                 </h3>
                 <p className="text-xs text-emerald-800 mt-1 leading-relaxed">
@@ -204,10 +204,10 @@ export const KycPage: React.FC<KycPageProps> = ({
                 <Clock className="w-5 h-5 animate-spin" />
               </div>
               <div className="flex-1">
-                <span className="text-[11px] font-bold text-blue-800 uppercase tracking-wider bg-blue-200/60 px-2 py-0.5 rounded-md border border-blue-300">
+                <span className="text-[11px] font-extrabold tracking-tight text-blue-800 uppercase tracking-wider bg-blue-200/60 px-2 py-0.5 rounded-md border border-blue-300">
                   Documents Under Review
                 </span>
-                <h3 className="text-base font-bold text-[#0A192F] mt-1">
+                <h3 className="text-base font-extrabold tracking-tight text-slate-900 mt-1">
                   Verification In Progress
                 </h3>
                 <p className="text-xs text-slate-600 mt-1 leading-relaxed">
@@ -225,7 +225,7 @@ export const KycPage: React.FC<KycPageProps> = ({
           <div className="space-y-4 text-left mb-6">
             {/* What you need info card */}
             <div className="p-4 rounded-xl border border-blue-200 bg-blue-50 text-left">
-              <p className="text-xs font-bold text-blue-800 uppercase tracking-wide mb-2">
+              <p className="text-xs font-extrabold tracking-tight text-blue-800 uppercase tracking-wide mb-2">
                 What to keep ready
               </p>
               <ul className="text-xs text-blue-700 space-y-1.5">
@@ -247,7 +247,7 @@ export const KycPage: React.FC<KycPageProps> = ({
               id="continue-to-kyc-verification-btn"
               type="button"
               onClick={handleStartKyc}
-              className="w-full py-3.5 px-4 rounded-xl bg-[#0B63E5] hover:bg-blue-600 active:scale-[0.99] text-white font-semibold text-xs sm:text-sm shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-b from-blue-600 to-blue-700 shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),_0_2px_4px_rgba(37,99,235,0.2)] hover:from-blue-500 hover:to-blue-600 border border-blue-700 active:scale-[0.99] text-white font-semibold text-xs sm:text-sm shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               <ShieldCheck className="w-4 h-4" />
               <span>Continue to KYC Verification</span>

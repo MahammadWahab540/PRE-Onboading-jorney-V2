@@ -82,14 +82,14 @@ export const KycReadinessPage: React.FC<KycReadinessPageProps> = ({
         initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35 }}
-        className="bg-white rounded-2xl shadow-sm border border-slate-200/90 p-6 sm:p-8"
+        className="bg-white rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100/80 backdrop-blur-sm p-6 sm:p-8"
       >
         {/* Header */}
         <div className="mb-6">
-          <span className="text-xs font-bold text-[#0B63E5] uppercase tracking-wider bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100">
+          <span className="text-xs font-extrabold tracking-tight text-[#0B63E5] uppercase tracking-wider bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100">
             Preparation Guide
           </span>
-          <h1 className="text-2xl sm:text-3xl font-bold text-[#0A192F] tracking-tight mt-2.5 mb-2">
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 tracking-tight mt-2.5 mb-2">
             Prepare once, complete KYC smoothly
           </h1>
           <p className="text-sm text-slate-600 leading-relaxed">
@@ -103,7 +103,7 @@ export const KycReadinessPage: React.FC<KycReadinessPageProps> = ({
             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
               Booked Appointment
             </span>
-            <div className="text-lg font-bold text-[#0A192F] mt-0.5 flex items-center gap-2">
+            <div className="text-lg font-extrabold tracking-tight text-slate-900 mt-0.5 flex items-center gap-2">
               <Calendar className="w-4 h-4 text-[#0B63E5]" />
               <span>{dateLabel}</span>
               <span className="text-slate-300">•</span>
@@ -115,7 +115,7 @@ export const KycReadinessPage: React.FC<KycReadinessPageProps> = ({
             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
               Co-Applicant
             </span>
-            <div className="text-sm font-bold text-[#0B63E5] mt-0.5">
+            <div className="text-sm font-extrabold tracking-tight text-[#0B63E5] mt-0.5">
               {coApplicantRelation}
             </div>
           </div>
@@ -126,7 +126,7 @@ export const KycReadinessPage: React.FC<KycReadinessPageProps> = ({
             Each tile receives a checkmark -> progress line toward calendar card: KYC READY (pulse once) */}
         <div className="bg-slate-50 border border-slate-200/90 rounded-2xl p-5 mb-8 overflow-hidden">
           <div className="flex items-center justify-between mb-4">
-            <span className="text-xs font-bold text-slate-700">
+            <span className="text-xs font-extrabold tracking-tight text-slate-700">
               Readiness Verification Sequence
             </span>
             <span className="text-[11px] font-semibold text-[#0B63E5]">
@@ -158,7 +158,7 @@ export const KycReadinessPage: React.FC<KycReadinessPageProps> = ({
                       <Icon className="w-4 h-4" />
                     </div>
                     <div>
-                      <h4 className="text-xs font-bold text-[#0A192F]">
+                      <h4 className="text-xs font-extrabold tracking-tight text-slate-900">
                         {tile.title}
                       </h4>
                       <p className="text-[10px] text-slate-500">
@@ -195,7 +195,7 @@ export const KycReadinessPage: React.FC<KycReadinessPageProps> = ({
                   : { opacity: 1 }
               }
               transition={{ duration: 0.5 }}
-              className={`w-full py-3 px-4 rounded-xl border-2 flex items-center justify-center gap-2 font-bold text-xs transition-all ${
+              className={`w-full py-3 px-4 rounded-xl border-2 flex items-center justify-center gap-2 font-extrabold tracking-tight text-xs transition-all ${
                 animationCompleted
                   ? 'border-emerald-500 bg-emerald-50 text-emerald-800 shadow-sm'
                   : 'border-blue-300 bg-blue-50 text-blue-800'
@@ -209,29 +209,29 @@ export const KycReadinessPage: React.FC<KycReadinessPageProps> = ({
 
         {/* Detailed checklist points */}
         <div className="mb-6 space-y-3">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">
+          <h3 className="text-xs font-extrabold tracking-tight uppercase tracking-wider text-slate-700">
             Checklist for your session
           </h3>
 
           <div className="space-y-2 text-xs text-slate-600">
             <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200/80">
-              <strong className="text-[#0A192F] font-semibold">PAN details:</strong>{' '}
+              <strong className="text-slate-900 font-semibold">PAN details:</strong>{' '}
               Learner / co-applicant as applicable.
             </div>
             <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200/80">
-              <strong className="text-[#0A192F] font-semibold">Aadhaar + linked mobile:</strong>{' '}
+              <strong className="text-slate-900 font-semibold">Aadhaar + linked mobile:</strong>{' '}
               If Aadhaar OTP verification is required.
             </div>
             <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200/80">
-              <strong className="text-[#0A192F] font-semibold">Current address:</strong>{' '}
+              <strong className="text-slate-900 font-semibold">Current address:</strong>{' '}
               Keep address details ready.
             </div>
             <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200/80">
-              <strong className="text-[#0A192F] font-semibold">Employment / income details:</strong>{' '}
+              <strong className="text-slate-900 font-semibold">Employment / income details:</strong>{' '}
               As requested by the lender.
             </div>
             <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200/80">
-              <strong className="text-[#0A192F] font-semibold">Bank / supporting information:</strong>{' '}
+              <strong className="text-slate-900 font-semibold">Bank / supporting information:</strong>{' '}
               Only if requested by the lender.
             </div>
           </div>
@@ -261,7 +261,7 @@ export const KycReadinessPage: React.FC<KycReadinessPageProps> = ({
             id="reschedule-kyc-btn"
             type="button"
             onClick={onReschedule}
-            className="w-full sm:w-auto py-3 px-4 rounded-xl text-xs font-semibold text-slate-600 hover:text-[#0A192F] hover:bg-slate-100 transition-colors flex items-center justify-center gap-1.5"
+            className="w-full sm:w-auto py-3 px-4 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors flex items-center justify-center gap-1.5"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             <span>Reschedule</span>

@@ -33,19 +33,19 @@ export const PaymentMethodPage: React.FC<PaymentMethodPageProps> = ({
     {
       id: 'FULL_PAYMENT' as PaymentMethodType,
       title: 'Full Payment',
-      badge: 'Fastest Route',
-      description: 'Pay the full program fee in one go via UPI, Netbanking, or Debit Card.',
+      badge: 'Recommended',
+      description: 'Pay your full balance at once using UPI, Netbanking, or Card.',
       note: isRetargetingOrRetention ? undefined : `Official Registration Link: ${fullPaymentInfo.link}`,
       icon: (
         <div className="w-11 h-11 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-[#0B63E5] font-black text-xl">
-          â‚¹
+          ₹
         </div>
       ),
     },
     {
       id: 'CREDIT_CARD' as PaymentMethodType,
       title: 'Credit Card',
-      badge: 'Instant Confirmation',
+      badge: 'Instant',
       description: 'Pay securely using your credit card with zero wait time.',
       icon: (
         <div className="w-11 h-11 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
@@ -56,8 +56,8 @@ export const PaymentMethodPage: React.FC<PaymentMethodPageProps> = ({
     {
       id: 'NO_COST_EMI' as PaymentMethodType,
       title: (state.program?.name?.toLowerCase().includes('iit') || state.program?.name?.toLowerCase().includes('ocn')) ? 'EMI' : 'No-Cost EMI',
-      badge: 'Popular Option',
-      description: 'Spread the program fee into monthly instalments.',
+      badge: 'Popular',
+      description: 'Spread your balance into easy monthly installments.',
       note: "If you choose EMI, we'll explain the process before asking for any financing details.",
       icon: (
         <div className="w-11 h-11 rounded-xl bg-sky-50 border border-sky-100 flex items-center justify-center text-sky-600">
@@ -92,11 +92,11 @@ export const PaymentMethodPage: React.FC<PaymentMethodPageProps> = ({
         initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35 }}
-        className="bg-white rounded-2xl shadow-sm border border-slate-200/90 p-6 sm:p-8"
+        className="bg-white rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100/80 backdrop-blur-sm p-6 sm:p-8"
       >
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-2xl sm:text-3xl font-bold text-[#0A192F] tracking-tight mb-2">
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 tracking-tight mb-2">
             How would you like to pay?
           </h1>
           <p className="text-sm text-slate-600 leading-relaxed">
@@ -114,7 +114,7 @@ export const PaymentMethodPage: React.FC<PaymentMethodPageProps> = ({
               <Headphones className="w-4 h-4" />
             </div>
             <div>
-              <h4 className="text-xs font-bold uppercase tracking-wider text-blue-900">
+              <h4 className="text-xs font-extrabold tracking-tight uppercase tracking-wider text-blue-900">
                 Admissions Consultation ({currentTeam} Team)
               </h4>
               <p className="text-xs text-blue-800 mt-1 leading-relaxed">
@@ -152,7 +152,7 @@ export const PaymentMethodPage: React.FC<PaymentMethodPageProps> = ({
                     <div className="shrink-0">{m.icon}</div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <h3 className="text-base font-bold text-[#0A192F]">
+                        <h3 className="text-base font-extrabold tracking-tight text-slate-900">
                           {m.title}
                         </h3>
                         {m.badge && (
@@ -226,7 +226,7 @@ export const PaymentMethodPage: React.FC<PaymentMethodPageProps> = ({
             id="payment-back-btn"
             type="button"
             onClick={onBack}
-            className="w-full sm:w-auto py-3 px-4 rounded-xl text-xs font-semibold text-slate-600 hover:text-[#0A192F] hover:bg-slate-100 transition-colors flex items-center justify-center gap-1.5"
+            className="w-full sm:w-auto py-3 px-4 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors flex items-center justify-center gap-1.5"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>Back</span>

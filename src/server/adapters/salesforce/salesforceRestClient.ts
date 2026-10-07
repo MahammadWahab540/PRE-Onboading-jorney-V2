@@ -197,7 +197,7 @@ export class SalesforceRestClient {
 
     // Support legacy/demo token alias mapped to real live record
     if (sanitized === 'nw_rahul_genius_2026') {
-      whereClause = "Id = 'a03IT00001HXuViYAL'";
+      whereClause = "Id = 'a03IT00001HXutuYAD'";
     } else if (/^[a-zA-Z0-9]{15}([a-zA-Z0-9]{3})?$/.test(sanitized)) {
       // 15 or 18 character Salesforce ID
       whereClause = `Id = '${sanitized}'`;
@@ -394,7 +394,7 @@ export class SalesforceRestClient {
       SELECT ${this.ACADEMY_PRE_FIELDS}
       FROM Academy_Onboarding_PRE__c
       WHERE ${whereClauses.join(' OR ')}
-      ORDER BY CreatedDate DESC
+      ORDER BY Active__c DESC, LastModifiedDate DESC, CreatedDate DESC
       LIMIT ${Math.min(limit, 100)}
     `.trim().replace(/\s+/g, ' ');
 

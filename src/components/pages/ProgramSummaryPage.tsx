@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import {
   CheckCircle2,
@@ -38,7 +38,12 @@ export const ProgramSummaryPage: React.FC<ProgramSummaryPageProps> = ({
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const program = state?.program || state?.canonicalJourney?.program || {};
-  const programName = program.name || 'NxtWave Smart Program';
+  const sfRecord = (state as any)?.rawRecord || (state as any)?.canonicalJourney?.rawRecord;
+  const programName =
+    sfRecord?.Program_PRE__c ||
+    (state as any)?.Program_PRE__c ||
+    program.name ||
+    'NxtWave Program';
   const isIitOcn = programName.toLowerCase().includes('iit') || programName.toLowerCase().includes('ocn');
 
   // Initialize selected tenure from state or default to 3
@@ -72,9 +77,24 @@ export const ProgramSummaryPage: React.FC<ProgramSummaryPageProps> = ({
     pendingAmount = activeTenureOption.pendingAmount;
     emi = activeTenureOption.emi;
     jodoGrade = activeTenureOption.jodoGrade;
+  } else if (!isIitOcn) {
+    // For non-IIT programs, check if Salesforce provided an authoritative remaining amount
+    const sfRemainingRaw =
+      program.remainingAmountPayable ??
+      sfRecord?.Remaining_Amount_To_Be_Paid_PRE__c ??
+      (state as any)?.Remaining_Amount_To_Be_Paid_PRE__c;
+    if (sfRemainingRaw !== undefined && sfRemainingRaw !== null && !isNaN(Number(sfRemainingRaw))) {
+      pendingAmount = Number(sfRemainingRaw);
+    }
   }
 
   const yourProgramFee = Math.max(totalFee - discount, 0);
+
+  // Financed amount (e.g. approved loan amount) if pending amount is less than remaining program fee
+  const loanFinancedAmount =
+    !isIitOcn && pendingAmount < standardRemainingProgramFee
+      ? standardRemainingProgramFee - pendingAmount
+      : 0;
 
   // Data Validation
   const expectedPending = totalFee - discount - userPaid;
@@ -105,8 +125,8 @@ export const ProgramSummaryPage: React.FC<ProgramSummaryPageProps> = ({
           baseFee: standardProgramFee,
           scholarshipAmount: standardScholarshipAmount,
           seatReservationPaid: standardAmountAlreadyPaid,
-          amountPayable: standardRemainingProgramFee,
-          remainingAmountPayable: standardRemainingProgramFee,
+          amountPayable: pendingAmount,
+          remainingAmountPayable: pendingAmount,
         });
       }
     }
@@ -134,10 +154,10 @@ export const ProgramSummaryPage: React.FC<ProgramSummaryPageProps> = ({
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 text-center"
+          className="bg-white rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100/80 backdrop-blur-sm p-8 text-center"
         >
           <AlertCircle className="w-10 h-10 text-rose-500 mx-auto mb-4" />
-          <h2 className="text-lg font-bold text-slate-800 mb-2">Unable to load fee details</h2>
+          <h2 className="text-lg font-extrabold tracking-tight text-slate-800 mb-2">Unable to load fee details</h2>
           <p className="text-sm text-slate-500 mb-6">
             We couldn't retrieve your latest program fee information. Please retry.
           </p>
@@ -164,21 +184,21 @@ export const ProgramSummaryPage: React.FC<ProgramSummaryPageProps> = ({
         transition={{ duration: 0.35 }}
       >
         {/* ENROLMENT SUMMARY CARD */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 sm:p-7 mb-6">
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight mb-2">
-            Review Your Program & Fee
+        <div className="bg-white rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100/80 backdrop-blur-sm p-5 sm:p-7 mb-6">
+          <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900 tracking-tight mb-2">
+            Review your program and fee
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mb-6">
-            Confirm your enrolment details and choose a repayment tenure before continuing.
+            Confirm your details and choose a repayment plan before you continue.
           </p>
 
           {/* Program Info */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-[#F8FAFC] border border-slate-200 rounded-xl mb-6">
             <div>
-              <span className="text-[10px] font-bold text-slate-500 block mb-0.5 uppercase tracking-wider">PROGRAM</span>
-              <span className="font-bold text-slate-800">{programName}</span>
+              <span className="text-[10px] font-extrabold tracking-tight text-slate-500 block mb-0.5 uppercase tracking-wider">PROGRAM</span>
+              <span className="font-extrabold tracking-tight text-slate-800">{programName}</span>
             </div>
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-700 text-xs font-bold w-fit">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-700 text-xs font-extrabold tracking-tight w-fit">
               <CheckCircle2 className="w-3.5 h-3.5" />
               <span>Seat Reserved</span>
             </div>
@@ -187,7 +207,7 @@ export const ProgramSummaryPage: React.FC<ProgramSummaryPageProps> = ({
           {/* FEE SUMMARY */}
           <div className="border border-slate-200 rounded-xl overflow-hidden">
             <div className="bg-slate-50 border-b border-slate-200 px-4 py-3">
-              <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+              <span className="text-xs font-extrabold tracking-tight text-slate-700 uppercase tracking-wider">
                 FEE SUMMARY
               </span>
             </div>
@@ -225,17 +245,29 @@ export const ProgramSummaryPage: React.FC<ProgramSummaryPageProps> = ({
                 </div>
               )}
 
+              {loanFinancedAmount > 0 && (
+                <div className="flex justify-between items-start text-emerald-700">
+                  <div className="flex flex-col">
+                    <span className="font-medium">Loan Financed</span>
+                    <span className="text-xs text-slate-400">Pre-approved NBFC Loan</span>
+                  </div>
+                  <span className="font-mono font-medium">
+                    {`\u2212 ${formatINR(loanFinancedAmount)}`}
+                  </span>
+                </div>
+              )}
+
               <div className="pt-3 border-t-[3px] border-slate-100" />
 
               {isFullyPaid ? (
                 <div className="flex flex-col items-center justify-center py-4 bg-emerald-50 rounded-lg text-emerald-800 text-center">
                   <CheckCircle2 className="w-8 h-8 mb-2" />
-                  <span className="font-bold text-lg">Program Fee Fully Paid</span>
+                  <span className="font-extrabold tracking-tight text-lg">Program Fee Fully Paid</span>
                 </div>
               ) : (
                 <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 pt-1">
-                  <span className="font-bold text-slate-900 text-base">Pending Amount</span>
-                  <span className="font-mono font-bold text-2xl text-[#0B63E5]">
+                  <span className="font-extrabold tracking-tight text-slate-900 text-base">Pending Amount</span>
+                  <span className="font-mono font-extrabold tracking-tight text-2xl text-[#0B63E5]">
                     {formatINR(pendingAmount)}
                   </span>
                 </div>
@@ -246,8 +278,8 @@ export const ProgramSummaryPage: React.FC<ProgramSummaryPageProps> = ({
 
         {/* TENURE & EMI SECTION (IIT OCN ONLY) */}
         {isIitOcn && !isFullyPaid && (
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 sm:p-7 mb-6">
-            <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-4">
+          <div className="bg-white rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100/80 backdrop-blur-sm p-5 sm:p-7 mb-6">
+            <h2 className="text-xs font-extrabold tracking-tight text-slate-700 uppercase tracking-wider mb-4">
               CHOOSE EMI TENURE
             </h2>
             
@@ -275,11 +307,11 @@ export const ProgramSummaryPage: React.FC<ProgramSummaryPageProps> = ({
             </div>
 
             <div className="mt-5 sm:mt-6 pt-5 sm:pt-6 border-t border-slate-100">
-              <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+              <h2 className="text-xs font-extrabold tracking-tight text-slate-500 uppercase tracking-wider mb-2">
                 Estimated EMI
               </h2>
               <div className="flex items-baseline gap-2">
-                <span className="font-mono font-bold text-2xl text-slate-900">{formatINR(emi, 2)}</span>
+                <span className="font-mono font-extrabold tracking-tight text-2xl text-slate-900">{formatINR(emi, 2)}</span>
                 <span className="text-slate-500 font-medium">/ month</span>
               </div>
               <p className="text-xs text-slate-500 mt-2 font-medium">
@@ -335,7 +367,7 @@ export const ProgramSummaryPage: React.FC<ProgramSummaryPageProps> = ({
             disabled={!isValidData}
             className={`w-full sm:w-auto px-6 py-3 rounded-xl text-white text-sm font-semibold shadow-sm flex items-center justify-center gap-2 transition-colors ${
               isValidData 
-                ? 'bg-[#0B63E5] hover:bg-blue-600 cursor-pointer' 
+                ? 'bg-gradient-to-b from-blue-600 to-blue-700 shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),_0_2px_4px_rgba(37,99,235,0.2)] hover:from-blue-500 hover:to-blue-600 border border-blue-700 cursor-pointer' 
                 : 'bg-slate-300 cursor-not-allowed'
             }`}
           >

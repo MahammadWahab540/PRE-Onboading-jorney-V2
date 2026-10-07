@@ -275,7 +275,7 @@ export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
     },
     {
       q: 'What is an e-NACH Auto-Debit Mandate?',
-      a: 'e-NACH is a secure, RBI-mandated digital banking authorization that allows your monthly EMI to be automatically debited from your co-applicantâ€™s bank account on a fixed date each month.',
+      a: "e-NACH is a secure, RBI-mandated digital banking authorization that allows your monthly EMI to be automatically debited from your co-applicant's bank account on a fixed date each month.",
     }
   ];
 
@@ -285,11 +285,11 @@ export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
         initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35 }}
-        className="bg-white rounded-2xl shadow-sm border border-slate-200/90 p-6 sm:p-8"
+        className="bg-white rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100/80 backdrop-blur-sm p-6 sm:p-8"
       >
         {/* Top Header */}
         <div className="flex items-center justify-between mb-4">
-          <span className="text-xs font-bold text-[#0B63E5] uppercase tracking-wider bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
+          <span className="text-xs font-extrabold tracking-tight text-[#0B63E5] uppercase tracking-wider bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
             Education Financing Dashboard
           </span>
           <div className="flex items-center gap-1.5 text-xs text-slate-600 font-semibold bg-slate-100 px-2.5 py-0.5 rounded-full">
@@ -298,11 +298,11 @@ export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
           </div>
         </div>
 
-        <h1 className="text-2xl sm:text-3xl font-bold text-[#0A192F] tracking-tight mb-2">
-          Financing Application Status
+        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 tracking-tight mb-2">
+          Payment plan status
         </h1>
         <p className="text-sm text-slate-600 leading-relaxed mb-6">
-          Track the step-by-step underwriting, verification, and auto-debit setup for your educational facility.
+          Track the approval and setup of your monthly payment plan.
         </p>
 
         {/* 0% NO-COST EMI BENEFIT BANNER */}
@@ -312,8 +312,8 @@ export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
               <ShieldCheck className="w-4 h-4" />
             </div>
             <div>
-              <span className="text-xs font-bold text-emerald-900 block">{isIitOcn ? 'Educational EMI' : '0% Interest No-Cost Educational EMI'}</span>
-              <span className="text-[11px] text-emerald-700">Zero hidden fees â€¢ Subsidized by NxtWave â€¢ Equal monthly installments</span>
+              <span className="text-xs font-extrabold tracking-tight text-emerald-900 block">{isIitOcn ? 'Educational EMI' : '0% Interest No-Cost Educational EMI'}</span>
+              <span className="text-[11px] text-emerald-700">Zero hidden fees • Subsidized by NxtWave • Equal monthly installments</span>
             </div>
           </div>
           <div className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-800 bg-white/80 px-2.5 py-1 rounded-full border border-emerald-200">
@@ -377,7 +377,7 @@ export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-2">
-                  <span className={`text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
+                  <span className={`text-[11px] font-extrabold tracking-tight uppercase tracking-wider px-2 py-0.5 rounded ${
                     nbfcData.statusCode === 'DISBURSED' ? 'bg-emerald-100 text-emerald-800' :
                     nbfcData.statusCode === 'APPROVED' ? 'bg-green-100 text-green-800' :
                     nbfcData.statusCode === 'EMI_SETUP_COMPLETED' ? 'bg-blue-100 text-blue-800' :
@@ -404,7 +404,7 @@ export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
 
                 {nbfcData.guidanceMessage && (
                   <p className="text-xs text-slate-600 mt-1.5 leading-relaxed bg-white/70 p-2.5 rounded-lg border border-slate-200/60">
-                    ðŸ’¡ <strong className="text-slate-800">What to expect:</strong> {nbfcData.guidanceMessage}
+                    💡 <strong className="text-slate-800">What to expect:</strong> {nbfcData.guidanceMessage}
                   </p>
                 )}
 
@@ -512,10 +512,10 @@ export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
                 <CheckCircle2 className="w-5 h-5" />
               </div>
               <div className="flex-1">
-                <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider bg-emerald-200/60 px-2 py-0.5 rounded-md border border-emerald-300">
+                <span className="text-[11px] font-extrabold tracking-tight text-emerald-800 uppercase tracking-wider bg-emerald-200/60 px-2 py-0.5 rounded-md border border-emerald-300">
                   Loan Approved
                 </span>
-                <h3 className="text-base font-bold text-emerald-950 mt-1">
+                <h3 className="text-base font-extrabold tracking-tight text-emerald-950 mt-1">
                   Auto-Debit (e-NACH Mandate) Setup
                 </h3>
                 <p className="text-xs text-emerald-800 mt-1 leading-relaxed">
@@ -537,14 +537,14 @@ export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
         <div className="border border-slate-200 rounded-2xl p-5 sm:p-6 mb-6 text-left bg-white shadow-xs">
           <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
             <div>
-              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+              <h3 className="text-xs font-extrabold tracking-tight text-slate-900 uppercase tracking-wider flex items-center gap-2">
                 <span>Financing Cadence &amp; Progression</span>
               </h3>
               <p className="text-[11px] text-slate-500 mt-0.5">
                 Standard 5-stage educational loan journey with our partner lenders
               </p>
             </div>
-            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-[#0B63E5] border border-blue-100">
+            <span className="text-[11px] font-extrabold tracking-tight px-2 py-0.5 rounded-full bg-blue-50 text-[#0B63E5] border border-blue-100">
               Stage {currentCadenceStep} of 5
             </span>
           </div>
@@ -581,21 +581,21 @@ export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
                     ) : isCurrent ? (
                       <Clock className="w-4 h-4" />
                     ) : (
-                      <span className="text-xs font-bold font-mono">{stage.step}</span>
+                      <span className="text-xs font-extrabold tracking-tight font-mono">{stage.step}</span>
                     )}
                   </div>
 
                   {/* Content */}
                   <div className="flex-1 pb-1">
                     <div className="flex items-center justify-between gap-2">
-                      <span className={`text-xs font-bold ${
+                      <span className={`text-xs font-extrabold tracking-tight ${
                         isPast ? 'text-slate-900' :
                         isCurrent ? 'text-[#0B63E5]' :
                         'text-slate-500'
                       }`}>
                         Stage {stage.step}: {stage.name}
                       </span>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      <span className={`text-[10px] font-extrabold tracking-tight px-2 py-0.5 rounded-full ${
                         isPast ? 'bg-emerald-50 text-emerald-700' :
                         isCurrent ? 'bg-blue-50 text-[#0B63E5] border border-blue-200 font-semibold' :
                         'bg-slate-100 text-slate-400'
@@ -617,7 +617,7 @@ export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
 
         {/* FAQ & CADENCE GUIDANCE ACCORDION */}
         <div className="border border-slate-200 rounded-2xl p-5 mb-6 text-left bg-slate-50/50">
-          <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+          <h3 className="text-xs font-extrabold tracking-tight text-slate-800 uppercase tracking-wider mb-3 flex items-center gap-1.5">
             <Info className="w-3.5 h-3.5 text-[#0B63E5]" />
             <span>Understanding Educational Financing &amp; Flow</span>
           </h3>
@@ -698,7 +698,7 @@ export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
       {showSupportModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl border border-slate-200 text-left">
-            <h3 className="text-base font-bold text-slate-900 mb-1">
+            <h3 className="text-base font-extrabold tracking-tight text-slate-900 mb-1">
               Admissions Counselor Support Request
             </h3>
             <p className="text-xs text-slate-500 mb-4">
@@ -707,7 +707,7 @@ export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
 
             <form onSubmit={handleCreateTicket} className="space-y-3">
               <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 mb-1">
+                <label className="block text-[11px] font-extrabold tracking-tight uppercase tracking-wider text-slate-700 mb-1">
                   Inquiry Category
                 </label>
                 <select
@@ -723,7 +723,7 @@ export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 mb-1">
+                <label className="block text-[11px] font-extrabold tracking-tight uppercase tracking-wider text-slate-700 mb-1">
                   Message / Details
                 </label>
                 <textarea

@@ -103,14 +103,14 @@ export const PaymentLinkPage: React.FC<PaymentLinkPageProps> = ({
         initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35 }}
-        className="bg-white rounded-2xl shadow-sm border border-slate-200/90 p-6 sm:p-8"
+        className="bg-white rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100/80 backdrop-blur-sm p-6 sm:p-8"
       >
         {/* Header */}
         <div className="text-center mb-6">
           <div className="w-12 h-12 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-[#0B63E5] mb-3 mx-auto">
             <CreditCard className="w-6 h-6" />
           </div>
-          <h1 className="text-2xl font-bold text-[#0A192F] tracking-tight mb-1">
+          <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 tracking-tight mb-1">
             Complete your payment
           </h1>
           <p className="text-sm text-slate-600">
@@ -144,7 +144,7 @@ export const PaymentLinkPage: React.FC<PaymentLinkPageProps> = ({
             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
               Selected Method
             </span>
-            <span className="text-sm font-bold text-[#0A192F]">
+            <span className="text-sm font-extrabold tracking-tight text-slate-900">
               {methodLabel}
             </span>
           </div>
@@ -154,7 +154,7 @@ export const PaymentLinkPage: React.FC<PaymentLinkPageProps> = ({
               <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 Amount Payable
               </span>
-              <div className="text-2xl font-black text-[#0A192F] tracking-tight mt-0.5">
+              <div className="text-2xl font-black text-slate-900 tracking-tight mt-0.5">
                 {formattedAmount}
               </div>
             </div>
@@ -171,7 +171,7 @@ export const PaymentLinkPage: React.FC<PaymentLinkPageProps> = ({
             <div className="w-14 h-14 rounded-2xl bg-white shadow-xs border border-blue-100 flex items-center justify-center text-[#0B63E5] mb-3.5 mx-auto">
               <Headphones className="w-7 h-7" />
             </div>
-            <h3 className="text-lg font-bold text-[#0A192F] mb-1.5">
+            <h3 className="text-lg font-extrabold tracking-tight text-slate-900 mb-1.5">
               Our team will consult with you
             </h3>
             <p className="text-xs text-slate-600 leading-relaxed max-w-sm mx-auto mb-4">
@@ -188,7 +188,7 @@ export const PaymentLinkPage: React.FC<PaymentLinkPageProps> = ({
             {isFullPayment && (
               <div className="mb-6 p-4 rounded-xl bg-blue-50/80 border border-blue-200">
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-xs font-bold text-blue-900 uppercase tracking-wider">
+                  <span className="text-xs font-extrabold tracking-tight text-blue-900 uppercase tracking-wider">
                     {fullPaymentInfo.label}
                   </span>
                   <span className="text-[10px] px-2 py-0.5 rounded bg-blue-100 text-blue-700 font-semibold font-mono">

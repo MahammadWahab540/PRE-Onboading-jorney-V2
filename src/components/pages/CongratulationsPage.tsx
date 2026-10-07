@@ -25,7 +25,11 @@ export const CongratulationsPage: React.FC<CongratulationsPageProps> = ({
       ? learnerName.split(' ')[0] || 'Learner'
       : 'Learner';
   const programName =
-    typeof state.program?.name === 'string' ? state.program.name : 'NxtWave Program';
+    typeof state.program?.name === 'string'
+      ? state.program.name
+      : (state as any)?.Program_PRE__c ||
+        (state as any)?.canonicalJourney?.rawRecord?.Program_PRE__c ||
+        'NxtWave Program';
 
   // Subtle confetti particles state
   const [particles, setParticles] = useState<
@@ -81,7 +85,7 @@ export const CongratulationsPage: React.FC<CongratulationsPageProps> = ({
         initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: 'easeOut' }}
-        className="bg-white rounded-2xl shadow-sm border border-slate-200/90 p-6 sm:p-8 relative z-10 text-center"
+        className="bg-white rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100/80 backdrop-blur-sm p-6 sm:p-8 relative z-10 text-center"
       >
         {/* Success / Sparkle Icon */}
         <motion.div
@@ -94,7 +98,7 @@ export const CongratulationsPage: React.FC<CongratulationsPageProps> = ({
         </motion.div>
 
         {/* Heading & Subtitle */}
-        <h1 className="text-2xl sm:text-3xl font-bold text-[#0A192F] tracking-tight mb-2">
+        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 tracking-tight mb-2">
           Congratulations, {firstName}!
         </h1>
         <p className="text-slate-600 text-sm sm:text-base leading-relaxed mb-8 max-w-sm mx-auto">
@@ -112,7 +116,7 @@ export const CongratulationsPage: React.FC<CongratulationsPageProps> = ({
                 Program
               </span>
             </div>
-            <span className="text-base font-bold text-[#0A192F] tracking-tight">
+            <span className="text-base font-extrabold tracking-tight text-slate-900 tracking-tight">
               {programName}
             </span>
           </div>
@@ -126,7 +130,7 @@ export const CongratulationsPage: React.FC<CongratulationsPageProps> = ({
                 Enrollment Status
               </span>
             </div>
-            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-extrabold tracking-tight bg-emerald-50 text-emerald-700 border border-emerald-200">
               Ready to proceed
             </span>
           </div>

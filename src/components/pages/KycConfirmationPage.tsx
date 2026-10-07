@@ -73,7 +73,7 @@ END:VCALENDAR`;
         initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, scale: 0.96 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.4 }}
-        className="bg-white rounded-2xl shadow-sm border border-slate-200/90 p-6 sm:p-8 text-center"
+        className="bg-white rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100/80 backdrop-blur-sm p-6 sm:p-8 text-center"
       >
         {/* Large Success Indicator */}
         <motion.div
@@ -86,7 +86,7 @@ END:VCALENDAR`;
         </motion.div>
 
         {/* Heading & Supporting */}
-        <h1 className="text-2xl sm:text-3xl font-bold text-[#0A192F] tracking-tight mb-2">
+        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 tracking-tight mb-2">
           You’re all set
         </h1>
         <p className="text-sm sm:text-base text-slate-600 leading-relaxed mb-8 max-w-sm mx-auto">
@@ -100,7 +100,7 @@ END:VCALENDAR`;
               <Calendar className="w-3.5 h-3.5 text-[#0B63E5]" />
               Date
             </span>
-            <span className="text-sm font-bold text-[#0A192F]">
+            <span className="text-sm font-extrabold tracking-tight text-slate-900">
               {dateStr}
             </span>
           </div>
@@ -110,7 +110,7 @@ END:VCALENDAR`;
               <Clock className="w-3.5 h-3.5 text-[#0B63E5]" />
               Time
             </span>
-            <span className="text-sm font-bold text-[#0A192F]">
+            <span className="text-sm font-extrabold tracking-tight text-slate-900">
               {timeStr}
             </span>
           </div>
@@ -120,7 +120,7 @@ END:VCALENDAR`;
               <Users className="w-3.5 h-3.5 text-[#0B63E5]" />
               Co-applicant
             </span>
-            <span className="text-sm font-bold text-[#0A192F]">
+            <span className="text-sm font-extrabold tracking-tight text-slate-900">
               {coApplicant}
             </span>
           </div>
@@ -129,7 +129,7 @@ END:VCALENDAR`;
             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
               Status
             </span>
-            <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+            <span className="inline-flex items-center gap-1 text-xs font-extrabold tracking-tight text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
               <Check className="w-3 h-3 stroke-[3]" />
               <span>Scheduled</span>
             </span>

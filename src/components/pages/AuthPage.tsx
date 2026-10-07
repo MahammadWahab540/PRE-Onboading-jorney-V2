@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+﻿import React, { useState, useRef, useEffect } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import {
   ShieldCheck,
@@ -93,6 +93,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ state, token, onSuccess, onT
       setResendCountdown(data.cooldownSeconds || 30);
       if (data.devOtp) {
         setDevOtp(data.devOtp);
+        setOtp(data.devOtp.split(''));
       }
       setStage('OTP');
       // Pre-focus first box
@@ -201,6 +202,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ state, token, onSuccess, onT
       }
       if (data.devOtp) {
         setDevOtp(data.devOtp);
+        setOtp(data.devOtp.split(''));
       }
       setResendCountdown(30);
       setResendSuccess(true);
@@ -218,7 +220,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ state, token, onSuccess, onT
         initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35 }}
-        className="bg-white rounded-2xl shadow-sm border border-slate-200/90 p-6 sm:p-8 relative"
+        className="bg-white rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100/80 backdrop-blur-sm p-6 sm:p-8 relative"
       >
         {/* Security Trust Badge */}
         <div className="flex items-center gap-2 mb-6">
@@ -226,29 +228,29 @@ export const AuthPage: React.FC<AuthPageProps> = ({ state, token, onSuccess, onT
             <ShieldCheck className="w-5 h-5" />
           </div>
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-            NxtWave Secure Identity Access
+            Secure verification
           </span>
         </div>
 
         {stage === 'MOBILE' ? (
           /* ========================================================
-             STAGE 1: Enter Registered Mobile Number
+             STAGE 1: Enter Mobile Number
              ======================================================== */
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-[#0A192F] tracking-tight mb-2">
-              Continue your NxtWave enrollment
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 tracking-tight mb-2">
+              Complete your enrollment
             </h1>
             <p className="text-slate-600 text-sm leading-relaxed mb-6">
-              Enter your 10-digit registered mobile number to securely access your reserved seat and program details.
+              Enter the phone number you used during admission. We'll send a code to verify it's you.
             </p>
 
             <form onSubmit={handleSendOtp} className="space-y-4">
               <div>
                 <label
                   htmlFor="mobile-input"
-                  className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2"
+                  className="block text-xs font-extrabold tracking-tight text-slate-700 uppercase tracking-wider mb-2"
                 >
-                  Registered Mobile Number
+                  Mobile Number
                 </label>
                 <div className="relative flex items-center">
                   <div className="absolute left-3.5 flex items-center gap-1.5 text-slate-600 font-semibold text-sm select-none">
@@ -267,7 +269,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ state, token, onSuccess, onT
                       setErrorMessage(null);
                     }}
                     placeholder="98765 43210"
-                    className="w-full pl-20 pr-4 py-3 rounded-xl border border-slate-300 focus:border-[#0B63E5] focus:ring-3 focus:ring-blue-100 font-mono text-base font-semibold text-slate-800 outline-none transition-all"
+                    className="w-full pl-20 pr-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 shadow-sm font-mono text-base font-semibold text-slate-800 outline-none transition-all"
                   />
                 </div>
               </div>
@@ -283,7 +285,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ state, token, onSuccess, onT
                 id="btn-send-otp"
                 type="submit"
                 disabled={isLoading || mobileNumber.length !== 10}
-                className="w-full py-3 px-4 rounded-xl bg-[#0B63E5] hover:bg-blue-600 active:scale-[0.99] text-white font-semibold text-sm shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-3 px-4 rounded-xl bg-gradient-to-b from-blue-600 to-blue-700 shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),_0_2px_4px_rgba(37,99,235,0.2)] hover:from-blue-500 hover:to-blue-600 border border-blue-700 active:scale-[0.99] text-white font-semibold text-sm shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? (
                   <>
@@ -304,7 +306,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ state, token, onSuccess, onT
              STAGE 2: Verify 6-digit OTP
              ======================================================== */
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-[#0A192F] tracking-tight mb-2">
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 tracking-tight mb-2">
               Verify your mobile
             </h1>
             <p className="text-slate-600 text-sm leading-relaxed mb-6">
@@ -328,7 +330,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ state, token, onSuccess, onT
                     value={digit}
                     onChange={(e) => handleOtpChange(index, e.target.value)}
                     onKeyDown={(e) => handleOtpKeyDown(index, e)}
-                    className="w-11 h-13 sm:w-13 sm:h-15 text-center text-xl font-bold rounded-xl border border-slate-300 focus:border-[#0B63E5] focus:ring-3 focus:ring-blue-100 outline-none text-[#0A192F] transition-all"
+                    className="w-12 h-14 sm:w-14 sm:h-16 shadow-sm text-center text-xl font-extrabold tracking-tight rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 shadow-sm outline-none text-slate-900 transition-all"
                   />
                 ))}
               </div>
@@ -366,7 +368,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ state, token, onSuccess, onT
                 id="btn-verify-otp"
                 type="submit"
                 disabled={isLoading || otp.join('').length !== 6}
-                className="w-full py-3 px-4 rounded-xl bg-[#0B63E5] hover:bg-blue-600 active:scale-[0.99] text-white font-semibold text-sm shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-3 px-4 rounded-xl bg-gradient-to-b from-blue-600 to-blue-700 shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),_0_2px_4px_rgba(37,99,235,0.2)] hover:from-blue-500 hover:to-blue-600 border border-blue-700 active:scale-[0.99] text-white font-semibold text-sm shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? (
                   <>
@@ -384,7 +386,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ state, token, onSuccess, onT
 
             {/* Resend OTP countdown */}
             <div className="mt-6 pt-5 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-              <span>Didn’t get the code?</span>
+              <span>Didn't get the code?</span>
               {resendCountdown > 0 ? (
                 <span className="font-medium text-slate-400">
                   Resend in <strong className="text-slate-600">{resendCountdown}s</strong>
@@ -407,3 +409,4 @@ export const AuthPage: React.FC<AuthPageProps> = ({ state, token, onSuccess, onT
     </div>
   );
 };
+

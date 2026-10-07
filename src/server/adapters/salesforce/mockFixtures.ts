@@ -330,4 +330,44 @@ export const MOCK_SALESFORCE_FIXTURES: Record<string, SalesforceOnboardingRecord
     LMS_Access_Status__c: 'Active',
     Batch_Start_Date__c: '15 September 2026',
   },
+
+  // IIT OCN GOD MODE: Use this to test any stage
+  nw_iit_god_mode: {
+    Id: 'a0B5g000001God007',
+    Name: 'PRE-IIT-GODMODE',
+    Token__c: 'nw_iit_god_mode',
+    Student_Name__c: 'NxtWave Developer',
+    Student_WhatsApp_Number__c: '9999999999',
+    Email_PRE__c: 'dev@nxtwave.tech',
+    Program_PRE__c: 'IIT KGP OCN',
+    Authentication_Verified__c: true,
+    
+    // Config
+    Product_Price__c: 120000,
+    Amount_Payable_PRE__c: 82000,
+    Amount_Paid_Till_Now_To_Nxtwave_PRE__c: 18000,
+    Seat_Reservation_Amount_Paid__c: 18000,
+    EMI_Tenure_PRE__c: '6 Months',
+    
+    // ==========================================
+    // CHANGE THESE TO JUMP STAGES:
+    // ==========================================
+    
+    // 1. To test Payment:
+    Payment_Plan_PRE__c: 'EMI', // or 'No-Cost EMI', 'Full Payment'
+    Current_Payment_Status__c: 'NOT_STARTED', // Change to 'SUCCESS' to skip to Co-Applicant
+    
+    // 2. To test KYC:
+    KYC_Submission_Status__c: 'NOT_STARTED', // Change to 'SUBMITTED', 'VERIFIED'
+    
+    // 3. To test NBFC / Underwriting:
+    Onboarding_Status__c: 'NOT_STARTED', // Change to 'application in nbfc', 'emi setup done', 'full payment done'
+    Northern_Arc_Overall_Stages__c: 'Application Created', // Change to 'Review In Progress', 'Approved', 'Rejected', 'Disbursed'
+    
+    // ==========================================
+    
+    Co_Applicant_Name__c: 'Dev CoApplicant',
+    Relation_With_The_Co_Applicant_PRE__c: 'Father',
+    Co_Applicant_Phone_Number_PRE__c: '8888888888',
+  },
 };

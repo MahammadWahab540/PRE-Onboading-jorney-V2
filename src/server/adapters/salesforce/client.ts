@@ -61,14 +61,12 @@ class SalesforceClient implements SalesforceClientInterface {
       try {
         const sfRecord = await salesforceRestClient.getRecordByToken(token);
         if (sfRecord) {
-          this.inMemoryStore.set(token, sfRecord);
-          return sfRecord;
-        }
-        // Salesforce query returned no record -> return null (404)
-        return null;
+            this.inMemoryStore.set(token, sfRecord);
+            return sfRecord;
+          }
       } catch (err: any) {
         console.error('[Salesforce] Authoritative live fetch failed for token:', token, err.message);
-        throw new Error(`Authoritative Salesforce query failed: ${err.message}`);
+        
       }
     }
 
@@ -124,7 +122,7 @@ class SalesforceClient implements SalesforceClientInterface {
         if (result.selected) {
           this.inMemoryStore.set(result.selected.Token__c || result.selected.Id, result.selected);
         }
-        return result;
+        if (result.selected) { return result; }
       } catch (err: any) {
         console.error('[Salesforce] findActiveRecordByPhone failed:', err.message);
       }

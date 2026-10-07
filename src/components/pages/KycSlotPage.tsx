@@ -123,14 +123,14 @@ export const KycSlotPage: React.FC<KycSlotPageProps> = ({
         initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35 }}
-        className="bg-white rounded-2xl shadow-sm border border-slate-200/90 p-6 sm:p-8"
+        className="bg-white rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100/80 backdrop-blur-sm p-6 sm:p-8"
       >
         {/* Header */}
         <div className="mb-6">
-          <span className="text-xs font-bold text-[#0B63E5] uppercase tracking-wider bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100">
+          <span className="text-xs font-extrabold tracking-tight text-[#0B63E5] uppercase tracking-wider bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100">
             Step 3 of 4: Scheduling
           </span>
-          <h1 className="text-2xl sm:text-3xl font-bold text-[#0A192F] tracking-tight mt-2.5 mb-2">
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 tracking-tight mt-2.5 mb-2">
             Choose a convenient KYC time
           </h1>
           <p className="text-sm text-slate-600 leading-relaxed">
@@ -139,7 +139,7 @@ export const KycSlotPage: React.FC<KycSlotPageProps> = ({
         </div>
 
         {/* Co-applicant reminder chip */}
-        <div className="p-3.5 rounded-xl bg-blue-50/70 border border-blue-100 mb-6 flex items-center justify-between text-xs text-[#0A192F]">
+        <div className="p-3.5 rounded-xl bg-blue-50/70 border border-blue-100 mb-6 flex items-center justify-between text-xs text-slate-900">
           <div className="flex items-center gap-2">
             <Users className="w-4 h-4 text-[#0B63E5]" />
             <span>
@@ -153,7 +153,7 @@ export const KycSlotPage: React.FC<KycSlotPageProps> = ({
 
         {/* Date / Time Slot Chips */}
         <div className="mb-6">
-          <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-3">
+          <label className="block text-xs font-extrabold tracking-tight uppercase tracking-wider text-slate-700 mb-3">
             Available KYC Slots (Digital / Video Call)
           </label>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -180,7 +180,7 @@ export const KycSlotPage: React.FC<KycSlotPageProps> = ({
                   <div className="flex items-start justify-between">
                     <div>
                       <span
-                        className={`text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md ${
+                        className={`text-[11px] font-extrabold tracking-tight uppercase tracking-wider px-2 py-0.5 rounded-md ${
                           isSelected
                             ? 'bg-blue-200/80 text-[#0047BA]'
                             : 'bg-slate-100 text-slate-600'
@@ -188,7 +188,7 @@ export const KycSlotPage: React.FC<KycSlotPageProps> = ({
                       >
                         {slot.dateLabel}
                       </span>
-                      <div className="text-base font-bold text-[#0A192F] mt-2 flex items-center gap-1.5">
+                      <div className="text-base font-extrabold tracking-tight text-slate-900 mt-2 flex items-center gap-1.5">
                         <Clock className="w-4 h-4 text-[#0B63E5]" />
                         <span>{slot.displayTime}</span>
                       </div>
@@ -224,7 +224,7 @@ export const KycSlotPage: React.FC<KycSlotPageProps> = ({
               className="mt-0.5 w-4 h-4 rounded text-[#0B63E5] focus:ring-blue-500 border-slate-300 cursor-pointer"
             />
             <div className="text-xs text-slate-700 leading-relaxed">
-              <span className="font-semibold text-[#0A192F]">
+              <span className="font-semibold text-slate-900">
                 My co-applicant will be available during this time.
               </span>
               <p className="text-slate-500 text-[11px] mt-0.5">
@@ -255,7 +255,7 @@ export const KycSlotPage: React.FC<KycSlotPageProps> = ({
             id="back-to-co-applicant-btn"
             type="button"
             onClick={onBack}
-            className="w-full sm:w-auto py-3 px-4 rounded-xl text-xs font-semibold text-slate-600 hover:text-[#0A192F] hover:bg-slate-100 transition-colors flex items-center justify-center gap-1.5"
+            className="w-full sm:w-auto py-3 px-4 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors flex items-center justify-center gap-1.5"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>Back</span>

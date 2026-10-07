@@ -145,25 +145,25 @@ export const CoApplicantPage: React.FC<CoApplicantPageProps> = ({
         initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35 }}
-        className="bg-white rounded-2xl shadow-sm border border-slate-200/90 p-6 sm:p-8"
+        className="bg-white rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100/80 backdrop-blur-sm p-6 sm:p-8"
       >
         {/* Header */}
         <div className="mb-6">
-          <span className="text-xs font-bold text-[#0B63E5] uppercase tracking-wider bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100">
+          <span className="text-xs font-extrabold tracking-tight text-[#0B63E5] uppercase tracking-wider bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100">
             Financing Support • Co-Applicant Profile
           </span>
-          <h1 className="text-2xl sm:text-3xl font-bold text-[#0A192F] tracking-tight mt-2.5 mb-2">
-            Co-Applicant Eligibility &amp; Details
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 tracking-tight mt-2.5 mb-2">
+            Add a co-applicant
           </h1>
           <p className="text-sm text-slate-600 leading-relaxed">
-            Because students typically lack an independent income history, an earning co-applicant (parent or working guardian) supports the NBFC financing application.
+            Since you are a student, we need a parent or working guardian to support your payment plan application.
           </p>
         </div>
 
         {/* Video Guide Accordion / Compact Player */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+            <span className="text-xs font-extrabold tracking-tight text-slate-700 flex items-center gap-1.5">
               <Users className="w-4 h-4 text-[#0B63E5]" />
               <span>Video Guide • కో-అప్లికెంట్ ఎంపిక &amp; రూల్స్</span>
             </span>
@@ -183,7 +183,7 @@ export const CoApplicantPage: React.FC<CoApplicantPageProps> = ({
 
           {/* Section 1: Relationship */}
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+            <label className="block text-xs font-extrabold tracking-tight uppercase tracking-wider text-slate-700 mb-2">
               1. Relationship with Learner
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
@@ -197,7 +197,7 @@ export const CoApplicantPage: React.FC<CoApplicantPageProps> = ({
                   }}
                   className={`p-2.5 rounded-xl text-xs font-semibold border transition-all text-center ${
                     relation === opt.id
-                      ? 'border-[#0B63E5] bg-[#F4F8FF] text-[#0A192F] font-bold ring-1 ring-[#0B63E5]'
+                      ? 'border-[#0B63E5] bg-[#F4F8FF] text-slate-900 font-extrabold tracking-tight ring-1 ring-[#0B63E5]'
                       : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
                   }`}
                 >
@@ -221,7 +221,7 @@ export const CoApplicantPage: React.FC<CoApplicantPageProps> = ({
 
           {/* Section 2: Basic Details */}
           <div className="border-t border-slate-100 pt-5">
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-3">
+            <label className="block text-xs font-extrabold tracking-tight uppercase tracking-wider text-slate-700 mb-3">
               2. Basic Identity Details
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -291,7 +291,7 @@ export const CoApplicantPage: React.FC<CoApplicantPageProps> = ({
 
           {/* Section 3: Professional & Financial Profile */}
           <div className="border-t border-slate-100 pt-5">
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-3">
+            <label className="block text-xs font-extrabold tracking-tight uppercase tracking-wider text-slate-700 mb-3">
               3. Professional &amp; Financial Profile
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -348,7 +348,7 @@ export const CoApplicantPage: React.FC<CoApplicantPageProps> = ({
 
           {/* Section 4: Address & Residence */}
           <div className="border-t border-slate-100 pt-5">
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-3">
+            <label className="block text-xs font-extrabold tracking-tight uppercase tracking-wider text-slate-700 mb-3">
               4. Address &amp; Residence
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -387,7 +387,7 @@ export const CoApplicantPage: React.FC<CoApplicantPageProps> = ({
 
           {/* Section 5: Document Readiness Checklist */}
           <div className="border-t border-slate-100 pt-5">
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+            <label className="block text-xs font-extrabold tracking-tight uppercase tracking-wider text-slate-700 mb-2">
               5. Document Readiness Checklist
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
@@ -419,7 +419,7 @@ export const CoApplicantPage: React.FC<CoApplicantPageProps> = ({
 
           {/* Section 6: Guidance & Transparency Card */}
           <div className="p-4 rounded-xl bg-blue-50/70 border border-blue-200/80 text-xs text-slate-700 space-y-1.5">
-            <div className="flex items-center gap-1.5 font-bold text-slate-900">
+            <div className="flex items-center gap-1.5 font-extrabold tracking-tight text-slate-900">
               <Info className="w-4 h-4 text-[#0B63E5]" />
               <span>Important Financing Guidance &amp; Rights</span>
             </div>

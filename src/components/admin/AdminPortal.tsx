@@ -56,6 +56,7 @@ interface SalesforceRecord {
   KYC_Submitted__c?: boolean;
   Onboarding_Status__c?: string;
   Remarks_PRE__c?: string;
+  Active__c?: boolean;
 }
 
 interface AdminRecordItem {
@@ -160,7 +161,7 @@ export function buildEnrollmentState(rec: SalesforceRecord, journeyData?: any): 
       preferredLanguage: canonical.learner?.preferredLanguage || 'English',
     },
     program: {
-      name: canonical.program?.name || rec.Program_PRE__c || 'NxtWave Smart Program',
+      name: rec.Program_PRE__c || canonical.program?.name || 'NxtWave Genius',
       price: sfAmountToBeReceived,
       amountPayable: sfAmountToBeReceived,
       baseFee: sfBaseFee,
@@ -214,7 +215,8 @@ export function buildEnrollmentState(rec: SalesforceRecord, journeyData?: any): 
     },
     isAuthenticated: true,
     canonicalJourney: canonical.journey ? canonical : { journey: canonical },
-  };
+    rawRecord: rec,
+  } as any;
 }
 
 export const AdminPortal: React.FC = () => {
@@ -247,7 +249,11 @@ export const AdminPortal: React.FC = () => {
         throw new Error(`No learner record found matching UID "${q}"`);
       }
 
-      const matchedItem: AdminRecordItem = data.data[0];
+      // Prioritize the authoritative active record (e.g. Active__c === true, actionable status)
+      const explicitlyActiveItem = data.data.find(
+        (item: AdminRecordItem) => item.record?.Active__c === true
+      );
+      const matchedItem: AdminRecordItem = explicitlyActiveItem || data.data[0];
       setSelectedItem(matchedItem);
 
       // Automatically jump to the exact step where progress is stopped

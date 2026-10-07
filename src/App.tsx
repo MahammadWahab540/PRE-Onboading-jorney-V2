@@ -294,7 +294,7 @@ export default function App() {
             if (parsedRoute && parsedRoute !== 'auth' && requestedIndex >= serverIndex) {
               if (parsedRoute === 'class-access' && !isClassUnlocked) {
                 console.log(
-                  `[EnrollmentSync] ðŸ›¡ï¸ Route Guard: Class access is locked. Redirecting from '/class-access' to authoritative stage '${serverRoute}'.`
+                  `[EnrollmentSync] 🛡️ Route Guard: Class access is locked. Redirecting from '/class-access' to authoritative stage '${serverRoute}'.`
                 );
                 targetRoute = serverRoute;
               } else {
@@ -303,7 +303,7 @@ export default function App() {
             } else {
               if (parsedRoute && requestedIndex < serverIndex) {
                 console.log(
-                  `[EnrollmentSync] ðŸ›¡ï¸ Route Guard auto-redirect: URL route '${parsedRoute}' (step #${requestedIndex}) regressed behind Salesforce stage route '${serverRoute}' (step #${serverIndex}). Redirecting to '${serverRoute}'.`
+                  `[EnrollmentSync] 🛡️ Route Guard auto-redirect: URL route '${parsedRoute}' (step #${requestedIndex}) regressed behind Salesforce stage route '${serverRoute}' (step #${serverIndex}). Redirecting to '${serverRoute}'.`
                 );
               }
               targetRoute = serverRoute;
@@ -454,7 +454,7 @@ export default function App() {
           name: coApplicantData?.name || '',
           relation: coApplicantData?.relation || 'Parent',
           mobileMasked: coApplicantData?.mobile
-            ? `${coApplicantData.mobile.slice(0, 2)}â€¢â€¢â€¢â€¢â€¢${coApplicantData.mobile.slice(-3)}`
+            ? `${coApplicantData.mobile.slice(0, 2)}•••••${coApplicantData.mobile.slice(-3)}`
             : prev.coApplicant.mobileMasked,
         },
       }));
@@ -475,7 +475,7 @@ export default function App() {
 
   if (isInitializing) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center p-4">
+      <div className="min-h-screen bg-slate-50 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-100 via-slate-50 to-slate-100 flex flex-col items-center justify-center p-4">
         <div className="w-12 h-12 rounded-2xl bg-blue-100 flex items-center justify-center text-[#0B63E5] animate-pulse mb-4">
           <div className="w-6 h-6 rounded-full border-3 border-[#0B63E5] border-t-transparent animate-spin" />
         </div>
@@ -490,7 +490,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-sans text-slate-800 antialiased selection:bg-blue-100 selection:text-blue-900">
+    <div className="min-h-screen bg-slate-50 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-100 via-slate-50 to-slate-100 flex flex-col font-sans text-slate-800 antialiased selection:bg-blue-100 selection:text-blue-900">
       {/* NxtWave Portal Header */}
       <NxtWaveHeader
         currentRoute={currentRoute}
@@ -709,12 +709,12 @@ export default function App() {
       {/* Footer */}
       <footer className="py-6 border-t border-slate-200/80 bg-white text-center text-xs text-slate-500">
         <div className="max-w-4xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p>Â© {new Date().getFullYear()} NxtWave Disruptive Technologies. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} NxtWave Disruptive Technologies. All rights reserved.</p>
           <div className="flex items-center gap-4 text-[11px] text-slate-500">
             <span>Privacy Protected</span>
-            <span>â€¢</span>
+            <span>•</span>
             <span>256-bit SSL Secure</span>
-            <span>â€¢</span>
+            <span>•</span>
             <button
               type="button"
               onClick={() => setIsSupportOpen(true)}
@@ -722,7 +722,7 @@ export default function App() {
             >
               Support Helpline
             </button>
-            <span>â€¢</span>
+            <span>•</span>
             <a
               href="/admin"
               className="hover:text-[#0B63E5] underline hover:no-underline cursor-pointer font-medium"
