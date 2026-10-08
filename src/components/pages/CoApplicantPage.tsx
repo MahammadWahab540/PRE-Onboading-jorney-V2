@@ -145,17 +145,17 @@ export const CoApplicantPage: React.FC<CoApplicantPageProps> = ({
         initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35 }}
-        className="bg-white rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100/80 backdrop-blur-sm p-6 sm:p-8"
+        className="bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-200/80 backdrop-blur-sm p-6 sm:p-8"
       >
         {/* Header */}
         <div className="mb-6">
-          <span className="text-xs font-extrabold tracking-tight text-[#0B63E5] uppercase tracking-wider bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100">
+          <span className="text-xs font-bold text-[#0B63E5] uppercase tracking-wider bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100 shadow-xs">
             Financing Support • Co-Applicant Profile
           </span>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 tracking-tight mt-2.5 mb-2">
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 text-balance mt-2.5 mb-2">
             Add a co-applicant
           </h1>
-          <p className="text-sm text-slate-600 leading-relaxed">
+          <p className="text-sm text-slate-600 leading-relaxed text-pretty">
             Since you are a student, we need a parent or working guardian to support your payment plan application.
           </p>
         </div>
@@ -163,7 +163,7 @@ export const CoApplicantPage: React.FC<CoApplicantPageProps> = ({
         {/* Video Guide Accordion / Compact Player */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-extrabold tracking-tight text-slate-700 flex items-center gap-1.5">
+            <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
               <Users className="w-4 h-4 text-[#0B63E5]" />
               <span>Video Guide • కో-అప్లికెంట్ ఎంపిక &amp; రూల్స్</span>
             </span>
@@ -183,7 +183,7 @@ export const CoApplicantPage: React.FC<CoApplicantPageProps> = ({
 
           {/* Section 1: Relationship */}
           <div>
-            <label className="block text-xs font-extrabold tracking-tight uppercase tracking-wider text-slate-700 mb-2">
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
               1. Relationship with Learner
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
@@ -195,10 +195,10 @@ export const CoApplicantPage: React.FC<CoApplicantPageProps> = ({
                     setRelation(opt.id);
                     setErrors((prev) => ({ ...prev, relation: '' }));
                   }}
-                  className={`p-2.5 rounded-xl text-xs font-semibold border transition-all text-center ${
+                  className={`p-2.5 rounded-xl text-xs font-bold border transition-all text-center cursor-pointer active:scale-[0.98] ${
                     relation === opt.id
-                      ? 'border-[#0B63E5] bg-[#F4F8FF] text-slate-900 font-extrabold tracking-tight ring-1 ring-[#0B63E5]'
-                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                      ? 'border-[#0B63E5] bg-[#F4F8FF] text-[#0B63E5] ring-2 ring-blue-500/10 shadow-xs'
+                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
                   }`}
                 >
                   {opt.label}
@@ -436,7 +436,7 @@ export const CoApplicantPage: React.FC<CoApplicantPageProps> = ({
               id="co-applicant-back-btn"
               type="button"
               onClick={onBack}
-              className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-slate-200 text-xs sm:text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+              className="w-full sm:w-auto px-5 py-3 rounded-xl border border-slate-200 text-xs sm:text-sm font-semibold text-slate-600 hover:bg-slate-50 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>Back</span>
@@ -446,7 +446,7 @@ export const CoApplicantPage: React.FC<CoApplicantPageProps> = ({
               id="continue-to-kyc-btn"
               type="submit"
               disabled={isSubmitting}
-              className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-[#0B63E5] text-white text-xs sm:text-sm font-semibold hover:bg-blue-600 transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-gradient-to-b from-[#0B63E5] to-[#0047BA] shadow-[inset_0_1px_1px_rgba(255,255,255,0.25),_0_2px_6px_rgba(11,99,229,0.25)] hover:from-blue-600 hover:to-blue-700 border border-blue-700 text-white text-xs sm:text-sm font-bold active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
             >
               <span>Continue to KYC Verification</span>
               <ArrowRight className="w-4 h-4" />

@@ -81,13 +81,13 @@ export const ClassAccessPage: React.FC<ClassAccessPageProps> = ({
         initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, scale: 0.95, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.5, ease: 'easeOut' }}
-        className="bg-white rounded-3xl shadow-sm border border-slate-100 p-8 sm:p-12 relative z-20 flex flex-col items-center"
+        className="bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-200/80 p-8 sm:p-12 relative z-20 flex flex-col items-center"
       >
         <div className="w-20 h-20 rounded-full bg-emerald-50 flex items-center justify-center mb-6 shadow-xs ring-4 ring-emerald-50/50">
           <GraduationCap className="w-10 h-10 text-emerald-600 stroke-[1.5]" />
         </div>
 
-        <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-slate-900 tracking-tight mb-3">
+        <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-slate-900 text-balance mb-3">
           Congratulations, {learnerName.split(' ')[0]}!
         </h1>
         
@@ -103,7 +103,7 @@ export const ClassAccessPage: React.FC<ClassAccessPageProps> = ({
           id="launch-lms-btn"
           type="button"
           onClick={handleLaunchLms}
-          className="group w-full max-w-sm py-4 px-6 rounded-2xl bg-gradient-to-b from-blue-600 to-blue-700 shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),_0_2px_4px_rgba(37,99,235,0.2)] hover:from-blue-500 hover:to-blue-600 border border-blue-700 active:scale-[0.98] text-white font-extrabold tracking-tight text-base shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
+          className="group w-full max-w-sm py-4 px-6 rounded-2xl bg-gradient-to-b from-[#0B63E5] to-[#0047BA] shadow-[inset_0_1px_1px_rgba(255,255,255,0.25),_0_2px_6px_rgba(11,99,229,0.25)] hover:from-blue-600 hover:to-blue-700 border border-blue-700 active:scale-[0.98] text-white font-extrabold tracking-tight text-base transition-all flex items-center justify-center gap-2 cursor-pointer"
         >
           <span>Go to Learning Portal</span>
           <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />

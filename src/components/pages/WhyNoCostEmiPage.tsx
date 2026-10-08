@@ -1,4 +1,4 @@
-﻿import React, { useState, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import {
   Play,
@@ -224,18 +224,18 @@ export const WhyNoCostEmiPage: React.FC<WhyNoCostEmiPageProps> = ({
         initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="bg-white rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100/80 backdrop-blur-sm p-5 sm:p-7 flex flex-col items-center"
+        className="bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-200/80 backdrop-blur-sm p-5 sm:p-7 flex flex-col items-center"
       >
         {/* Header - Clean and focused */}
         <div className="w-full text-center mb-4">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-100 text-xs font-semibold text-[#0B63E5] mb-2">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-100 text-xs font-bold text-[#0B63E5] mb-2 shadow-xs">
             <Sparkles className="w-3.5 h-3.5" />
             <span>{isIitOcn ? 'Financing & EMI Guide' : 'Financing & No-Cost EMI Guide'}</span>
           </div>
-          <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900 tracking-tight">
+          <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900 text-balance">
             If you choose {isIitOcn ? 'EMI' : 'No-Cost EMI'}
           </h1>
-          <div className="text-xs sm:text-sm text-slate-500 mt-2 space-y-2 max-w-md mx-auto">
+          <div className="text-xs sm:text-sm text-slate-500 mt-2 space-y-2 max-w-md mx-auto text-pretty">
             <p>
               Before you continue, we'll explain how the payment plan works, including the monthly payment, financing process, and any applicable charges.
             </p>
@@ -246,7 +246,7 @@ export const WhyNoCostEmiPage: React.FC<WhyNoCostEmiPageProps> = ({
 
           {/* Language Switcher */}
           <div className="flex items-center justify-center gap-1.5 mt-3">
-            <span className="text-[11px] font-medium text-slate-500 flex items-center gap-1 mr-1">
+            <span className="text-[11px] font-semibold text-slate-500 flex items-center gap-1 mr-1">
               <Languages className="w-3.5 h-3.5 text-slate-400" />
               <span>Audio:</span>
             </span>
@@ -254,7 +254,7 @@ export const WhyNoCostEmiPage: React.FC<WhyNoCostEmiPageProps> = ({
               id="emi-lang-en-btn"
               type="button"
               onClick={() => toggleLanguage('en')}
-              className={`px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+              className={`px-3 py-1 rounded-full text-xs font-bold transition-all active:scale-[0.96] cursor-pointer ${
                 language === 'en'
                   ? 'bg-[#0B63E5] text-white shadow-xs'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -266,7 +266,7 @@ export const WhyNoCostEmiPage: React.FC<WhyNoCostEmiPageProps> = ({
               id="emi-lang-te-btn"
               type="button"
               onClick={() => toggleLanguage('te')}
-              className={`px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+              className={`px-3 py-1 rounded-full text-xs font-bold transition-all active:scale-[0.96] cursor-pointer ${
                 language === 'te'
                   ? 'bg-[#0B63E5] text-white shadow-xs'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -497,7 +497,7 @@ export const WhyNoCostEmiPage: React.FC<WhyNoCostEmiPageProps> = ({
             id="emi-back-btn"
             type="button"
             onClick={onBack}
-            className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-slate-200 text-xs sm:text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+            className="w-full sm:w-auto px-5 py-3 rounded-xl border border-slate-200 text-xs sm:text-sm font-semibold text-slate-600 hover:bg-slate-50 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Back to Program</span>
@@ -507,7 +507,7 @@ export const WhyNoCostEmiPage: React.FC<WhyNoCostEmiPageProps> = ({
             id="emi-continue-btn"
             type="button"
             onClick={onContinue}
-            className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-[#0B63E5] text-white text-xs sm:text-sm font-semibold hover:bg-blue-600 transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-gradient-to-b from-[#0B63E5] to-[#0047BA] shadow-[inset_0_1px_1px_rgba(255,255,255,0.25),_0_2px_6px_rgba(11,99,229,0.25)] hover:from-blue-600 hover:to-blue-700 border border-blue-700 text-white text-xs sm:text-sm font-bold active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
             <span>{isIitOcn ? 'Continue with EMI' : 'Continue with No-Cost EMI'}</span>
             <ArrowRight className="w-4 h-4" />

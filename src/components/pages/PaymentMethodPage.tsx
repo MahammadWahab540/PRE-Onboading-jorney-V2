@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import { CreditCard, CalendarDays, ArrowRight, ArrowLeft, CheckCircle2, ShieldCheck, Headphones } from 'lucide-react';
 import type { PaymentMethodType, EnrollmentState } from '../../types';
@@ -92,14 +92,14 @@ export const PaymentMethodPage: React.FC<PaymentMethodPageProps> = ({
         initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35 }}
-        className="bg-white rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100/80 backdrop-blur-sm p-6 sm:p-8"
+        className="bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-200/80 backdrop-blur-sm p-6 sm:p-8"
       >
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 tracking-tight mb-2">
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 text-balance mb-2">
             How would you like to pay?
           </h1>
-          <p className="text-sm text-slate-600 leading-relaxed">
+          <p className="text-sm text-slate-600 leading-relaxed text-pretty">
             Choose the option that works best for you and your family.
           </p>
         </div>
@@ -108,16 +108,16 @@ export const PaymentMethodPage: React.FC<PaymentMethodPageProps> = ({
         {isRetargetingOrRetention && (
           <div
             role="status"
-            className="mb-6 p-4 rounded-xl bg-blue-50/90 border border-blue-200 text-blue-950 flex items-start gap-3 shadow-xs"
+            className="mb-6 p-4 rounded-2xl bg-blue-50/90 border border-blue-200/80 text-blue-950 flex items-start gap-3 shadow-xs"
           >
-            <div className="w-8 h-8 rounded-lg bg-blue-100 text-[#0B63E5] flex items-center justify-center shrink-0 mt-0.5">
+            <div className="w-8 h-8 rounded-lg bg-blue-100 text-[#0B63E5] flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
               <Headphones className="w-4 h-4" />
             </div>
             <div>
-              <h4 className="text-xs font-extrabold tracking-tight uppercase tracking-wider text-blue-900">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-blue-900">
                 Admissions Consultation ({currentTeam} Team)
               </h4>
-              <p className="text-xs text-blue-800 mt-1 leading-relaxed">
+              <p className="text-xs text-blue-800 mt-1 leading-relaxed text-pretty">
                 Our team will consult with you to finalize your personalized program fee and guide you through payment options. Official payment links will be provided directly during consultation.
               </p>
             </div>
@@ -141,10 +141,10 @@ export const PaymentMethodPage: React.FC<PaymentMethodPageProps> = ({
                     setSelected(m.id);
                   }
                 }}
-                className={`w-full text-left p-4 sm:p-5 rounded-2xl border-2 transition-all cursor-pointer relative ${
+                className={`w-full text-left p-4 sm:p-5 rounded-2xl border-2 transition-all duration-150 cursor-pointer relative active:scale-[0.99] ${
                   isChosen
-                    ? 'border-[#0B63E5] bg-[#F4F8FF] shadow-sm ring-2 ring-blue-100'
-                    : 'border-slate-200 hover:border-slate-300 bg-white'
+                    ? 'border-[#0B63E5] bg-[#F4F8FF]/80 shadow-xs ring-4 ring-blue-500/10'
+                    : 'border-slate-200/90 hover:border-slate-300 bg-white hover:bg-slate-50/50'
                 }`}
               >
                 <div className="flex items-start justify-between gap-3">
@@ -157,9 +157,9 @@ export const PaymentMethodPage: React.FC<PaymentMethodPageProps> = ({
                         </h3>
                         {m.badge && (
                           <span
-                            className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                               isChosen
-                                ? 'bg-blue-200/70 text-[#0047BA]'
+                                ? 'bg-blue-100 text-[#0047BA]'
                                 : 'bg-slate-100 text-slate-600'
                             }`}
                           >
@@ -167,12 +167,12 @@ export const PaymentMethodPage: React.FC<PaymentMethodPageProps> = ({
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                      <p className="text-xs text-slate-600 mt-1 leading-relaxed text-pretty">
                         {m.description}
                       </p>
 
                       {m.note && (
-                        <p className="text-[11px] font-medium text-[#0B63E5] mt-2 bg-blue-50/80 p-2 rounded-lg border border-blue-100/80">
+                        <p className="text-[11px] font-medium text-[#0B63E5] mt-2 bg-blue-50/80 p-2 rounded-xl border border-blue-100/80">
                           {m.note}
                         </p>
                       )}
@@ -181,9 +181,9 @@ export const PaymentMethodPage: React.FC<PaymentMethodPageProps> = ({
 
                   {/* Radio tick indicator */}
                   <div
-                    className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 mt-1 transition-colors ${
+                    className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 mt-1 transition-all ${
                       isChosen
-                        ? 'border-[#0B63E5] bg-[#0B63E5] text-white'
+                        ? 'border-[#0B63E5] bg-[#0B63E5] text-white shadow-xs'
                         : 'border-slate-300 bg-white'
                     }`}
                   >
@@ -196,7 +196,7 @@ export const PaymentMethodPage: React.FC<PaymentMethodPageProps> = ({
         </div>
 
         {/* Security badge */}
-        <div className="mb-6 flex items-center gap-2 text-xs text-slate-500 bg-slate-50 p-3 rounded-xl border border-slate-100">
+        <div className="mb-6 flex items-center gap-2 text-xs text-slate-500 bg-slate-50/80 p-3 rounded-xl border border-slate-200/60 shadow-xs">
           <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
           <span>No hidden charges. 100% transparent fee breakup.</span>
         </div>
@@ -208,9 +208,9 @@ export const PaymentMethodPage: React.FC<PaymentMethodPageProps> = ({
             type="button"
             disabled={!selected || isSubmitting}
             onClick={handleContinue}
-            className={`w-full sm:flex-1 py-3.5 px-6 rounded-xl text-sm font-semibold text-white transition-all flex items-center justify-center gap-2 ${
+            className={`w-full sm:flex-1 py-3.5 px-6 rounded-xl text-sm font-bold text-white transition-all duration-150 flex items-center justify-center gap-2 active:scale-[0.98] ${
               selected && !isSubmitting
-                ? 'bg-[#0B63E5] hover:bg-[#0047BA] active:scale-[0.99] shadow-sm shadow-blue-500/20 cursor-pointer'
+                ? 'bg-gradient-to-b from-[#0B63E5] to-[#0047BA] shadow-[inset_0_1px_1px_rgba(255,255,255,0.25),_0_2px_6px_rgba(11,99,229,0.25)] hover:from-blue-600 hover:to-blue-700 border border-blue-700 cursor-pointer'
                 : 'bg-slate-300 text-slate-500 cursor-not-allowed'
             }`}
           >
@@ -226,7 +226,7 @@ export const PaymentMethodPage: React.FC<PaymentMethodPageProps> = ({
             id="payment-back-btn"
             type="button"
             onClick={onBack}
-            className="w-full sm:w-auto py-3 px-4 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors flex items-center justify-center gap-1.5"
+            className="w-full sm:w-auto py-3 px-4 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 cursor-pointer"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>Back</span>

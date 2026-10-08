@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import {
   Building2,
@@ -285,7 +285,7 @@ export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
         initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35 }}
-        className="bg-white rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100/80 backdrop-blur-sm p-6 sm:p-8"
+        className="bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-200/80 backdrop-blur-sm p-6 sm:p-8"
       >
         {/* Top Header */}
         <div className="flex items-center justify-between mb-4">
@@ -298,7 +298,7 @@ export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
           </div>
         </div>
 
-        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 tracking-tight mb-2">
+        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 text-balance mb-2">
           Payment plan status
         </h1>
         <p className="text-sm text-slate-600 leading-relaxed mb-6">
@@ -674,7 +674,7 @@ export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
                 id="nbfc-continue-to-class-btn"
                 type="button"
                 onClick={onComplete}
-                className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-[#0B63E5] text-white text-xs sm:text-sm font-semibold hover:bg-blue-600 transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-gradient-to-b from-[#0B63E5] to-[#0047BA] shadow-[inset_0_1px_1px_rgba(255,255,255,0.25),_0_2px_6px_rgba(11,99,229,0.25)] hover:from-blue-600 hover:to-blue-700 border border-blue-700 text-white text-xs sm:text-sm font-bold active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 <span>Access Class Portal</span>
                 <ArrowRight className="w-4 h-4" />
@@ -683,7 +683,7 @@ export const NbfcStatusPage: React.FC<NbfcStatusPageProps> = ({
               <button
                 type="button"
                 onClick={() => setShowSupportModal(true)}
-                className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-blue-200 text-xs font-semibold text-[#0B63E5] hover:bg-blue-50 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-blue-200/90 text-xs font-bold text-[#0B63E5] hover:bg-blue-50/80 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
               >
                 <PhoneCall className="w-3.5 h-3.5" />
                 <span>Need Help? Contact Counselor</span>

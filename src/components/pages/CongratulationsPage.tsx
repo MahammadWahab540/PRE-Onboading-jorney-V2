@@ -85,59 +85,59 @@ export const CongratulationsPage: React.FC<CongratulationsPageProps> = ({
         initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: 'easeOut' }}
-        className="bg-white rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100/80 backdrop-blur-sm p-6 sm:p-8 relative z-10 text-center"
+        className="bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-200/80 backdrop-blur-sm p-6 sm:p-8 relative z-10 text-center"
       >
         {/* Success / Sparkle Icon */}
         <motion.div
           initial={prefersReducedMotion ? { scale: 1 } : { scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.1, type: 'spring', stiffness: 200 }}
-          className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-blue-500 to-indigo-600 text-white flex items-center justify-center mx-auto mb-6 shadow-md shadow-blue-500/25"
+          className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-blue-500 to-indigo-600 text-white flex items-center justify-center mx-auto mb-6 shadow-md shadow-blue-500/25 ring-4 ring-blue-500/10"
         >
           <Sparkles className="w-8 h-8 stroke-[2.2]" />
         </motion.div>
 
         {/* Heading & Subtitle */}
-        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 tracking-tight mb-2">
+        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 text-balance mb-2">
           Congratulations, {firstName}!
         </h1>
-        <p className="text-slate-600 text-sm sm:text-base leading-relaxed mb-8 max-w-sm mx-auto">
+        <p className="text-slate-600 text-sm sm:text-base leading-relaxed mb-8 max-w-sm mx-auto text-pretty">
           Your NxtWave enrollment journey is ready.
         </p>
 
         {/* Enrollment Status Card */}
-        <div className="bg-[#F4F8FF] border border-[#D6E4FA] rounded-2xl p-5 mb-8 text-left transition-all">
+        <div className="bg-[#F4F8FF]/80 border border-[#D6E4FA] rounded-2xl p-5 mb-8 text-left transition-all shadow-xs">
           <div className="flex items-center justify-between pb-3.5 mb-3.5 border-b border-[#E2EDFC]">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-[#0B63E5]">
+              <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-[#0B63E5] shadow-xs">
                 <Award className="w-4 h-4" />
               </div>
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                 Program
               </span>
             </div>
-            <span className="text-base font-extrabold tracking-tight text-slate-900 tracking-tight">
+            <span className="text-base font-extrabold tracking-tight text-slate-900">
               {programName}
             </span>
           </div>
 
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600">
+              <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600 shadow-xs">
                 <CheckCircle2 className="w-4 h-4" />
               </div>
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                 Enrollment Status
               </span>
             </div>
-            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-extrabold tracking-tight bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/80 shadow-xs">
               Ready to proceed
             </span>
           </div>
         </div>
 
         {/* Note on counselling to enrollment */}
-        <p className="text-xs text-slate-500 mb-6 leading-relaxed">
+        <p className="text-xs text-slate-500 mb-6 leading-relaxed text-pretty">
           Your counsellor has reviewed your profile and set up your personal enrollment path.
         </p>
 
@@ -146,7 +146,7 @@ export const CongratulationsPage: React.FC<CongratulationsPageProps> = ({
           id="view-my-program-btn"
           type="button"
           onClick={onNext}
-          className="w-full py-3.5 px-6 rounded-xl text-sm font-semibold text-white bg-[#0B63E5] hover:bg-[#0047BA] active:scale-[0.99] shadow-sm shadow-blue-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+          className="w-full py-4 px-6 rounded-xl text-sm font-bold text-white bg-gradient-to-b from-[#0B63E5] to-[#0047BA] shadow-[inset_0_1px_1px_rgba(255,255,255,0.25),_0_2px_6px_rgba(11,99,229,0.25)] hover:from-blue-600 hover:to-blue-700 border border-blue-700 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer"
         >
           <span>View My Program</span>
           <ArrowRight className="w-4 h-4" />

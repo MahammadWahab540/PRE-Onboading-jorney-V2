@@ -117,18 +117,18 @@ export const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
                 className="relative z-10 flex flex-col items-center group"
               >
                 <div
-                  className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
+                  className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-mono tabular-nums font-bold transition-all duration-300 ${
                     isCompleted
-                      ? 'bg-[#0B63E5] text-white ring-3 ring-blue-50'
+                      ? 'bg-[#0B63E5] text-white ring-3 ring-blue-100 shadow-xs'
                       : isCurrent
-                      ? 'bg-white border-2 border-[#0B63E5] text-[#0B63E5] ring-3 ring-blue-100 shadow-xs'
+                      ? 'bg-white border-2 border-[#0B63E5] text-[#0B63E5] ring-4 ring-blue-500/15 shadow-sm'
                       : 'bg-white border-2 border-slate-200 text-slate-400'
                   }`}
                 >
                   {isCompleted ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : step.id}
                 </div>
                 <span
-                  className={`mt-1 text-[10px] sm:text-[11px] font-semibold text-center hidden sm:block whitespace-nowrap transition-colors ${
+                  className={`mt-1.5 text-[10px] sm:text-[11px] font-semibold text-center hidden sm:block whitespace-nowrap transition-colors tracking-tight ${
                     isCurrent
                       ? 'text-[#0A192F] font-bold'
                       : isCompleted

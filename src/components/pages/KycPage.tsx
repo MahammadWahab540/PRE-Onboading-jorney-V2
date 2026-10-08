@@ -92,22 +92,22 @@ export const KycPage: React.FC<KycPageProps> = ({
         initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35 }}
-        className="bg-white rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100/80 backdrop-blur-sm p-6 sm:p-8"
+        className="bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-200/80 backdrop-blur-sm p-6 sm:p-8"
       >
         {/* Top Tag & Title */}
         <div className="flex items-center justify-between mb-4">
-          <span className="text-xs font-extrabold tracking-tight text-[#0B63E5] uppercase tracking-wider bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
+          <span className="text-xs font-bold text-[#0B63E5] uppercase tracking-wider bg-blue-50 px-3 py-1 rounded-full border border-blue-100 shadow-xs">
             Digital KYC Verification
           </span>
-          <span className="text-xs text-slate-500 font-medium">
+          <span className="text-xs text-slate-500 font-semibold">
             RBI Standard Verification
           </span>
         </div>
 
-        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 tracking-tight mb-2">
+        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 text-balance mb-2">
           Verify your identity
         </h1>
-        <p className="text-sm text-slate-600 leading-relaxed mb-6">
+        <p className="text-sm text-slate-600 leading-relaxed text-pretty mb-6">
           Complete your verification instantly using DigiLocker and your bank statements.
         </p>
 
@@ -283,7 +283,7 @@ export const KycPage: React.FC<KycPageProps> = ({
             id="kyc-back-btn"
             type="button"
             onClick={onBack}
-            className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-slate-200 text-xs sm:text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+            className="w-full sm:w-auto px-5 py-3 rounded-xl border border-slate-200 text-xs sm:text-sm font-semibold text-slate-600 hover:bg-slate-50 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Back</span>
@@ -294,7 +294,7 @@ export const KycPage: React.FC<KycPageProps> = ({
               id="kyc-continue-to-nbfc-btn"
               type="button"
               onClick={onContinue}
-              className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-[#0B63E5] text-white text-xs sm:text-sm font-semibold hover:bg-blue-600 transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-gradient-to-b from-[#0B63E5] to-[#0047BA] shadow-[inset_0_1px_1px_rgba(255,255,255,0.25),_0_2px_6px_rgba(11,99,229,0.25)] hover:from-blue-600 hover:to-blue-700 border border-blue-700 text-white text-xs sm:text-sm font-bold active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               <span>View Financing Status</span>
               <ArrowRight className="w-4 h-4" />

@@ -184,38 +184,38 @@ export const ProgramSummaryPage: React.FC<ProgramSummaryPageProps> = ({
         transition={{ duration: 0.35 }}
       >
         {/* ENROLMENT SUMMARY CARD */}
-        <div className="bg-white rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100/80 backdrop-blur-sm p-5 sm:p-7 mb-6">
-          <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900 tracking-tight mb-2">
+        <div className="bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-200/80 backdrop-blur-sm p-5 sm:p-7 mb-6">
+          <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900 text-balance mb-2">
             Review your program and fee
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mb-6">
+          <p className="text-xs sm:text-sm text-slate-500 mb-6 text-pretty">
             Confirm your details and choose a repayment plan before you continue.
           </p>
 
           {/* Program Info */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-[#F8FAFC] border border-slate-200 rounded-xl mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-[#F8FAFC] border border-slate-200/80 rounded-2xl mb-6 shadow-xs">
             <div>
-              <span className="text-[10px] font-extrabold tracking-tight text-slate-500 block mb-0.5 uppercase tracking-wider">PROGRAM</span>
-              <span className="font-extrabold tracking-tight text-slate-800">{programName}</span>
+              <span className="text-[10px] font-bold text-slate-500 block mb-0.5 uppercase tracking-wider">PROGRAM</span>
+              <span className="font-extrabold tracking-tight text-slate-900 text-base">{programName}</span>
             </div>
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-700 text-xs font-extrabold tracking-tight w-fit">
-              <CheckCircle2 className="w-3.5 h-3.5" />
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200/80 text-emerald-800 text-xs font-bold w-fit shadow-xs">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
               <span>Seat Reserved</span>
             </div>
           </div>
 
           {/* FEE SUMMARY */}
-          <div className="border border-slate-200 rounded-xl overflow-hidden">
-            <div className="bg-slate-50 border-b border-slate-200 px-4 py-3">
-              <span className="text-xs font-extrabold tracking-tight text-slate-700 uppercase tracking-wider">
+          <div className="border border-slate-200/90 rounded-2xl overflow-hidden shadow-xs">
+            <div className="bg-slate-50/80 border-b border-slate-200/80 px-4 py-3">
+              <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
                 FEE SUMMARY
               </span>
             </div>
             
-            <div className="p-4 space-y-3.5 text-sm">
+            <div className="p-4 sm:p-5 space-y-3.5 text-sm">
               <div className="flex justify-between items-start">
                 <span className="text-slate-600 font-medium">Program Fee</span>
-                <span className="font-mono font-medium text-slate-900">{formatINR(totalFee)}</span>
+                <span className="font-mono tabular-nums font-medium text-slate-900">{formatINR(totalFee)}</span>
               </div>
 
               {discount > 0 && (
@@ -223,7 +223,7 @@ export const ProgramSummaryPage: React.FC<ProgramSummaryPageProps> = ({
                   <div className="flex flex-col">
                     <span className="font-medium">Discount Applied</span>
                   </div>
-                  <span className="font-mono font-medium">{"\u2212"} {formatINR(discount)}</span>
+                  <span className="font-mono tabular-nums font-medium">{"\u2212"} {formatINR(discount)}</span>
                 </div>
               )}
 
@@ -231,7 +231,7 @@ export const ProgramSummaryPage: React.FC<ProgramSummaryPageProps> = ({
 
               <div className="flex justify-between items-start">
                 <span className="text-slate-800 font-semibold">Your Program Fee</span>
-                <span className="font-mono font-semibold text-slate-900">{formatINR(yourProgramFee)}</span>
+                <span className="font-mono tabular-nums font-semibold text-slate-900">{formatINR(yourProgramFee)}</span>
               </div>
 
               {(userPaid > 0 || isFullyPaid) && (
@@ -239,7 +239,7 @@ export const ProgramSummaryPage: React.FC<ProgramSummaryPageProps> = ({
                   <div className="flex flex-col">
                     <span className="font-medium">Amount Already Paid</span>
                   </div>
-                  <span className="font-mono font-medium">
+                  <span className="font-mono tabular-nums font-medium">
                     {userPaid > 0 ? `\u2212 ${formatINR(userPaid)}` : formatINR(0)}
                   </span>
                 </div>
@@ -251,7 +251,7 @@ export const ProgramSummaryPage: React.FC<ProgramSummaryPageProps> = ({
                     <span className="font-medium">Loan Financed</span>
                     <span className="text-xs text-slate-400">Pre-approved NBFC Loan</span>
                   </div>
-                  <span className="font-mono font-medium">
+                  <span className="font-mono tabular-nums font-medium">
                     {`\u2212 ${formatINR(loanFinancedAmount)}`}
                   </span>
                 </div>
@@ -260,14 +260,14 @@ export const ProgramSummaryPage: React.FC<ProgramSummaryPageProps> = ({
               <div className="pt-3 border-t-[3px] border-slate-100" />
 
               {isFullyPaid ? (
-                <div className="flex flex-col items-center justify-center py-4 bg-emerald-50 rounded-lg text-emerald-800 text-center">
-                  <CheckCircle2 className="w-8 h-8 mb-2" />
-                  <span className="font-extrabold tracking-tight text-lg">Program Fee Fully Paid</span>
+                <div className="flex flex-col items-center justify-center py-4 bg-emerald-50 rounded-xl text-emerald-800 text-center border border-emerald-200/60 shadow-xs">
+                  <CheckCircle2 className="w-8 h-8 mb-2 text-emerald-600" />
+                  <span className="font-bold text-lg">Program Fee Fully Paid</span>
                 </div>
               ) : (
                 <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 pt-1">
                   <span className="font-extrabold tracking-tight text-slate-900 text-base">Pending Amount</span>
-                  <span className="font-mono font-extrabold tracking-tight text-2xl text-[#0B63E5]">
+                  <span className="font-mono tabular-nums font-extrabold tracking-tight text-2xl text-[#0B63E5]">
                     {formatINR(pendingAmount)}
                   </span>
                 </div>
@@ -278,8 +278,8 @@ export const ProgramSummaryPage: React.FC<ProgramSummaryPageProps> = ({
 
         {/* TENURE & EMI SECTION (IIT OCN ONLY) */}
         {isIitOcn && !isFullyPaid && (
-          <div className="bg-white rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100/80 backdrop-blur-sm p-5 sm:p-7 mb-6">
-            <h2 className="text-xs font-extrabold tracking-tight text-slate-700 uppercase tracking-wider mb-4">
+          <div className="bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-200/80 backdrop-blur-sm p-5 sm:p-7 mb-6">
+            <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-4">
               CHOOSE EMI TENURE
             </h2>
             
@@ -291,15 +291,15 @@ export const ProgramSummaryPage: React.FC<ProgramSummaryPageProps> = ({
                   <button
                     key={opt.tenure}
                     onClick={() => setSelectedTenure(opt.tenure)}
-                    className={`flex-shrink-0 px-4 py-2.5 rounded-xl border font-semibold text-sm transition-all whitespace-nowrap ${
+                    className={`flex-shrink-0 px-4 py-2.5 rounded-xl border font-semibold text-sm transition-all whitespace-nowrap active:scale-[0.98] cursor-pointer ${
                       isSelected 
-                        ? 'border-[#0B63E5] bg-blue-50 text-[#0B63E5] shadow-sm' 
+                        ? 'border-[#0B63E5] bg-blue-50/90 text-[#0B63E5] shadow-xs ring-2 ring-blue-500/10' 
                         : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
                     }`}
                   >
                     <div className="flex items-center gap-2">
-                      <span>{opt.tenure} Months</span>
-                      {isSelected && <CheckCircle2 className="w-4 h-4" />}
+                      <span className="font-mono tabular-nums">{opt.tenure} Months</span>
+                      {isSelected && <CheckCircle2 className="w-4 h-4 text-[#0B63E5]" />}
                     </div>
                   </button>
                 );
@@ -307,11 +307,11 @@ export const ProgramSummaryPage: React.FC<ProgramSummaryPageProps> = ({
             </div>
 
             <div className="mt-5 sm:mt-6 pt-5 sm:pt-6 border-t border-slate-100">
-              <h2 className="text-xs font-extrabold tracking-tight text-slate-500 uppercase tracking-wider mb-2">
+              <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
                 Estimated EMI
               </h2>
               <div className="flex items-baseline gap-2">
-                <span className="font-mono font-extrabold tracking-tight text-2xl text-slate-900">{formatINR(emi, 2)}</span>
+                <span className="font-mono tabular-nums font-extrabold tracking-tight text-2xl text-slate-900">{formatINR(emi, 2)}</span>
                 <span className="text-slate-500 font-medium">/ month</span>
               </div>
               <p className="text-xs text-slate-500 mt-2 font-medium">
@@ -326,13 +326,13 @@ export const ProgramSummaryPage: React.FC<ProgramSummaryPageProps> = ({
 
         {/* NON-IIT OCN DISCLAIMER */}
         {!isIitOcn && !isFullyPaid && (
-          <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 mb-6 text-sm text-slate-600 text-center font-medium">
+          <div className="bg-slate-50/80 p-4 rounded-2xl border border-slate-200/70 mb-6 text-sm text-slate-600 text-center font-medium shadow-xs">
             Payment and financing options will be shown on the next step.
           </div>
         )}
 
         {/* PROGRAM OVERVIEW ACCORDION */}
-        <div className="mb-6 border border-slate-200 rounded-xl overflow-hidden">
+        <div className="mb-6 border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
           <button
             type="button"
             onClick={() => setShowCurriculumVideo((prev) => !prev)}
@@ -356,7 +356,7 @@ export const ProgramSummaryPage: React.FC<ProgramSummaryPageProps> = ({
         <div className="flex flex-col-reverse sm:flex-row items-center justify-between gap-3 pt-2">
           <button
             onClick={onBack}
-            className="w-full sm:w-auto px-5 py-3 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+            className="w-full sm:w-auto px-5 py-3 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Back</span>
@@ -365,9 +365,9 @@ export const ProgramSummaryPage: React.FC<ProgramSummaryPageProps> = ({
           <button
             onClick={handleNext}
             disabled={!isValidData}
-            className={`w-full sm:w-auto px-6 py-3 rounded-xl text-white text-sm font-semibold shadow-sm flex items-center justify-center gap-2 transition-colors ${
+            className={`w-full sm:w-auto px-6 py-3.5 rounded-xl text-white text-sm font-bold shadow-xs flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${
               isValidData 
-                ? 'bg-gradient-to-b from-blue-600 to-blue-700 shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),_0_2px_4px_rgba(37,99,235,0.2)] hover:from-blue-500 hover:to-blue-600 border border-blue-700 cursor-pointer' 
+                ? 'bg-gradient-to-b from-[#0B63E5] to-[#0047BA] shadow-[inset_0_1px_1px_rgba(255,255,255,0.25),_0_2px_6px_rgba(11,99,229,0.25)] hover:from-blue-600 hover:to-blue-700 border border-blue-700 cursor-pointer' 
                 : 'bg-slate-300 cursor-not-allowed'
             }`}
           >

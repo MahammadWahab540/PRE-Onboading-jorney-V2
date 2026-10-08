@@ -103,17 +103,17 @@ export const PaymentLinkPage: React.FC<PaymentLinkPageProps> = ({
         initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35 }}
-        className="bg-white rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100/80 backdrop-blur-sm p-6 sm:p-8"
+        className="bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-200/80 backdrop-blur-sm p-6 sm:p-8"
       >
         {/* Header */}
         <div className="text-center mb-6">
-          <div className="w-12 h-12 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-[#0B63E5] mb-3 mx-auto">
+          <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100/80 flex items-center justify-center text-[#0B63E5] mb-3 mx-auto shadow-xs">
             <CreditCard className="w-6 h-6" />
           </div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 tracking-tight mb-1">
+          <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 text-balance mb-1">
             Complete your payment
           </h1>
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-slate-600 text-pretty">
             Secure checkout powered by official banking partners
           </p>
         </div>
@@ -139,9 +139,9 @@ export const PaymentLinkPage: React.FC<PaymentLinkPageProps> = ({
         )}
 
         {/* Payment Summary Box */}
-        <div className="bg-[#F4F8FF] border border-[#D6E4FA] rounded-2xl p-5 mb-6">
+        <div className="bg-[#F4F8FF]/80 border border-[#D6E4FA] rounded-2xl p-5 mb-6 shadow-xs">
           <div className="flex items-center justify-between pb-3 mb-3 border-b border-[#E2EDFC]">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
               Selected Method
             </span>
             <span className="text-sm font-extrabold tracking-tight text-slate-900">
@@ -151,14 +151,14 @@ export const PaymentLinkPage: React.FC<PaymentLinkPageProps> = ({
 
           <div className="flex items-center justify-between">
             <div>
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                 Amount Payable
               </span>
-              <div className="text-2xl font-black text-slate-900 tracking-tight mt-0.5">
+              <div className="text-3xl font-extrabold font-mono tabular-nums text-slate-900 tracking-tight mt-0.5">
                 {formattedAmount}
               </div>
             </div>
-            <div className="flex items-center gap-1.5 text-xs text-slate-500">
+            <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
               <Clock className="w-3.5 h-3.5" />
               <span>Link valid for 60m</span>
             </div>
@@ -167,17 +167,17 @@ export const PaymentLinkPage: React.FC<PaymentLinkPageProps> = ({
 
         {/* Team Consultation Card vs Standard Direct Payment Links */}
         {isRetargetingOrRetention ? (
-          <div className="mb-6 p-6 rounded-2xl bg-gradient-to-br from-blue-50/80 to-indigo-50/40 border border-blue-200 text-center">
+          <div className="mb-6 p-6 rounded-2xl bg-gradient-to-br from-blue-50/80 to-indigo-50/40 border border-blue-200/80 text-center shadow-xs">
             <div className="w-14 h-14 rounded-2xl bg-white shadow-xs border border-blue-100 flex items-center justify-center text-[#0B63E5] mb-3.5 mx-auto">
               <Headphones className="w-7 h-7" />
             </div>
-            <h3 className="text-lg font-extrabold tracking-tight text-slate-900 mb-1.5">
+            <h3 className="text-lg font-extrabold tracking-tight text-slate-900 text-balance mb-1.5">
               Our team will consult with you
             </h3>
-            <p className="text-xs text-slate-600 leading-relaxed max-w-sm mx-auto mb-4">
+            <p className="text-xs text-slate-600 leading-relaxed max-w-sm mx-auto mb-4 text-pretty">
               Your profile is being assisted by our dedicated <strong>{currentTeam}</strong> team. An academic counselor will contact you at your registered phone number to guide you through fee concessions, payment structure, and finalize your enrollment.
             </p>
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-100 text-[#0047BA] text-xs font-semibold">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-100 text-[#0047BA] text-xs font-bold">
               <Clock className="w-3.5 h-3.5" />
               <span>Consultation Scheduled</span>
             </div>
@@ -186,23 +186,23 @@ export const PaymentLinkPage: React.FC<PaymentLinkPageProps> = ({
           <>
             {/* Official Full Payment Link Banner */}
             {isFullPayment && (
-              <div className="mb-6 p-4 rounded-xl bg-blue-50/80 border border-blue-200">
+              <div className="mb-6 p-4 rounded-2xl bg-blue-50/80 border border-blue-200/80 shadow-xs">
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-xs font-extrabold tracking-tight text-blue-900 uppercase tracking-wider">
+                  <span className="text-xs font-bold text-blue-900 uppercase tracking-wider">
                     {fullPaymentInfo.label}
                   </span>
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-blue-100 text-blue-700 font-semibold font-mono">
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-bold font-mono">
                     Official CCBP Link
                   </span>
                 </div>
-                <div className="text-xs text-blue-800 font-mono break-all mb-3">
+                <div className="text-xs text-blue-800 font-mono tabular-nums break-all mb-3">
                   {fullPaymentInfo.link}
                 </div>
                 <a
                   href={fullPaymentInfo.link}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#0B63E5] hover:bg-blue-700 text-white rounded-lg font-semibold text-xs transition cursor-pointer shadow-xs"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#0B63E5] hover:bg-blue-700 active:scale-[0.98] text-white rounded-lg font-bold text-xs transition-all cursor-pointer shadow-xs"
                 >
                   <span>Open Registration Payment Page</span>
                   <ExternalLink className="w-3.5 h-3.5" />
@@ -216,7 +216,7 @@ export const PaymentLinkPage: React.FC<PaymentLinkPageProps> = ({
               type="button"
               disabled={isProcessing}
               onClick={handlePayNow}
-              className="w-full py-4 px-6 rounded-xl text-base font-semibold text-white bg-[#0B63E5] hover:bg-[#0047BA] active:scale-[0.99] shadow-sm shadow-blue-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer mb-4"
+              className="w-full py-4 px-6 rounded-xl text-base font-bold text-white bg-gradient-to-b from-[#0B63E5] to-[#0047BA] shadow-[inset_0_1px_1px_rgba(255,255,255,0.25),_0_2px_6px_rgba(11,99,229,0.25)] hover:from-blue-600 hover:to-blue-700 border border-blue-700 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer mb-4"
             >
               {isProcessing ? (
                 <>
@@ -237,7 +237,7 @@ export const PaymentLinkPage: React.FC<PaymentLinkPageProps> = ({
                 id="copy-payment-link-btn"
                 type="button"
                 onClick={handleCopyLink}
-                className="py-2.5 px-3 rounded-xl border border-slate-200 hover:border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
+                className="py-2.5 px-3 rounded-xl border border-slate-200/90 hover:border-slate-300 bg-slate-50/80 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition-all active:scale-[0.98] flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
               >
                 {copied ? (
                   <>
@@ -256,7 +256,7 @@ export const PaymentLinkPage: React.FC<PaymentLinkPageProps> = ({
                 id="send-to-mobile-btn"
                 type="button"
                 onClick={handleSendMobile}
-                className="py-2.5 px-3 rounded-xl border border-slate-200 hover:border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
+                className="py-2.5 px-3 rounded-xl border border-slate-200/90 hover:border-slate-300 bg-slate-50/80 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition-all active:scale-[0.98] flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
               >
                 {mobileSent ? (
                   <>
@@ -286,7 +286,7 @@ export const PaymentLinkPage: React.FC<PaymentLinkPageProps> = ({
             id="back-to-payment-method-btn"
             type="button"
             onClick={onBack}
-            className="text-xs font-semibold text-slate-500 hover:text-slate-800 flex items-center gap-1.5 transition-colors"
+            className="text-xs font-semibold text-slate-500 hover:text-slate-800 flex items-center gap-1.5 transition-colors active:scale-[0.98] cursor-pointer"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>Change payment method</span>

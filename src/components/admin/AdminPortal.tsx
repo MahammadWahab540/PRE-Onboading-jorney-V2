@@ -409,7 +409,7 @@ export const AdminPortal: React.FC = () => {
                         window.history.replaceState(null, '', url.pathname + url.search);
                       } catch (_) {}
                     }}
-                    className={`px-3 py-1.5 rounded-lg font-medium transition cursor-pointer flex items-center gap-1.5 shrink-0 ${
+                    className={`px-3 py-1.5 rounded-xl font-medium transition-all active:scale-[0.97] cursor-pointer flex items-center gap-1.5 shrink-0 ${
                       isActive
                         ? 'bg-[#0B63E5] text-white font-bold shadow-xs'
                         : isStoppedStage
@@ -417,7 +417,7 @@ export const AdminPortal: React.FC = () => {
                         : 'bg-slate-800/60 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
                     }`}
                   >
-                    <span>Step {step.index}: {step.name}</span>
+                    <span><span className="font-mono tabular-nums">Step {step.index}:</span> {step.name}</span>
                     {isStoppedStage && (
                       <span className="px-1.5 py-0.2 text-[9px] rounded bg-amber-400 text-slate-950 font-bold">
                         STOPPED HERE
