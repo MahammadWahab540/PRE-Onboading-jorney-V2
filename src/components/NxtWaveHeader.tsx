@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldCheck, PhoneCall, Sparkles } from 'lucide-react';
+import { ShieldCheck, PhoneCall, Sparkles, MessageSquare } from 'lucide-react';
 import type { PortalRoute } from '../types';
 
 interface HeaderProps {
@@ -43,6 +43,18 @@ export const NxtWaveHeader: React.FC<HeaderProps> = ({
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
             <span>Secure Official Portal</span>
           </div>
+
+          <a
+            id="header-whatsapp-btn"
+            href="https://wa.me/919392901586"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 active:scale-[0.97] transition-all duration-150 shadow-xs cursor-pointer"
+            title="Chat on WhatsApp (+91 93929 01586)"
+          >
+            <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
+            <span className="hidden sm:inline">WhatsApp</span>
+          </a>
 
           {onOpenSupport && (
             <button

@@ -42,7 +42,7 @@ export const SupportModal: React.FC<SupportModalProps> = ({
 
         <div className="space-y-3 mb-6">
           <a
-            href="tel:1800123456"
+            href="tel:+919392901586"
             className="p-3.5 rounded-xl border border-slate-200 hover:border-blue-300 bg-slate-50 hover:bg-blue-50/50 flex items-center justify-between transition-colors group"
           >
             <div className="flex items-center gap-3">
@@ -54,7 +54,7 @@ export const SupportModal: React.FC<SupportModalProps> = ({
                   Call Counselor Helpline
                 </h4>
                 <p className="text-[11px] text-slate-500">
-                  Toll Free • Mon - Sat, 9 AM - 8 PM
+                  +91 93929 01586 • Mon - Sat, 9 AM - 8 PM
                 </p>
               </div>
             </div>
@@ -62,7 +62,7 @@ export const SupportModal: React.FC<SupportModalProps> = ({
           </a>
 
           <a
-            href="https://wa.me/919876543210"
+            href="https://wa.me/919392901586"
             target="_blank"
             rel="noopener noreferrer"
             className="p-3.5 rounded-xl border border-slate-200 hover:border-emerald-300 bg-slate-50 hover:bg-emerald-50/50 flex items-center justify-between transition-colors group"
@@ -76,7 +76,7 @@ export const SupportModal: React.FC<SupportModalProps> = ({
                   Chat on WhatsApp
                 </h4>
                 <p className="text-[11px] text-slate-500">
-                  Instant guidance on fees & documents
+                  +91 93929 01586 • Instant guidance on fees & documents
                 </p>
               </div>
             </div>

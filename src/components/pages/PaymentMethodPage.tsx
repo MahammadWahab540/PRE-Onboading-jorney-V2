@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
-import { CreditCard, CalendarDays, ArrowRight, ArrowLeft, CheckCircle2, ShieldCheck, Headphones } from 'lucide-react';
+import { CreditCard, CalendarDays, ArrowRight, ArrowLeft, CheckCircle2, ShieldCheck, Headphones, MessageSquare } from 'lucide-react';
 import type { PaymentMethodType, EnrollmentState } from '../../types';
 import { getFullPaymentInfo } from '../../utils/paymentLinks';
 
@@ -120,6 +120,17 @@ export const PaymentMethodPage: React.FC<PaymentMethodPageProps> = ({
               <p className="text-xs text-blue-800 mt-1 leading-relaxed text-pretty">
                 Our team will consult with you to finalize your personalized program fee and guide you through payment options. Official payment links will be provided directly during consultation.
               </p>
+              <div className="mt-2.5">
+                <a
+                  href="https://wa.me/919392901586"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+                >
+                  <MessageSquare className="w-3.5 h-3.5" />
+                  <span>Chat on WhatsApp (+91 93929 01586)</span>
+                </a>
+              </div>
             </div>
           </div>
         )}

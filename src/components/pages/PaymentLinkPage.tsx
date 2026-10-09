@@ -12,6 +12,7 @@ import {
   Clock,
   ArrowLeft,
   Headphones,
+  MessageSquare,
 } from 'lucide-react';
 import type { EnrollmentState } from '../../types';
 import { getFullPaymentInfo } from '../../utils/paymentLinks';
@@ -177,9 +178,20 @@ export const PaymentLinkPage: React.FC<PaymentLinkPageProps> = ({
             <p className="text-xs text-slate-600 leading-relaxed max-w-sm mx-auto mb-4 text-pretty">
               Your profile is being assisted by our dedicated <strong>{currentTeam}</strong> team. An academic counselor will contact you at your registered phone number to guide you through fee concessions, payment structure, and finalize your enrollment.
             </p>
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-100 text-[#0047BA] text-xs font-bold">
-              <Clock className="w-3.5 h-3.5" />
-              <span>Consultation Scheduled</span>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-100 text-[#0047BA] text-xs font-bold">
+                <Clock className="w-3.5 h-3.5" />
+                <span>Consultation Scheduled</span>
+              </div>
+              <a
+                href="https://wa.me/919392901586"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition-colors cursor-pointer"
+              >
+                <MessageSquare className="w-3.5 h-3.5" />
+                <span>Chat on WhatsApp (+91 93929 01586)</span>
+              </a>
             </div>
           </div>
         ) : (
